@@ -1,0 +1,75 @@
+{
+  "$schema": "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json",
+  "final_space": false,
+  "osc99": true,
+  "blocks": [
+    {
+      "type": "prompt",
+      "alignment": "left",
+      "segments": [
+        {
+          "background": "#9b2400",
+          "foreground": "#FFFFFF",
+          "leading_diamond": "\uE0B6",
+          "trailing_diamond": "",
+          "properties": {
+            "wsl": "",
+            "wsl_separator": ""
+          },
+          "style": "diamond",
+          "type": "os"
+        },
+        {
+          "background": "#535353",
+          "foreground": "#ffffff",
+          "properties": {
+            "time_format": "15:04"
+          },
+          "style": "powerline",
+          "powerline_symbol": "\ue0b0",
+          "type": "time"
+        },
+        {
+          "background": "#535353",
+          "foreground": "#ffffff",
+          "properties": {
+            "folder_icon": "",
+            "folder_separator_icon": "",
+            "home_icon": "\uf07b "
+          },
+          "style": "powerline",
+          "type": "path"
+        },
+        {
+          "type": "ruby",
+          "style": "powerline",
+          "powerline_symbol": "\uE0B0",
+          "foreground": "#ffffff",
+          "background": "#9b2400",
+          "properties": {
+            "prefix": " \uE791 "
+          }
+        },
+        {
+          "background": "#29912c",
+          "foreground": "#000000",
+          "background_templates": [
+            "{{ if or (.Working.Changed) (.Staging.Changed) }}#f2e329{{ end }}",
+            "{{ if and (gt .Ahead 0) (gt .Behind 0) }}#f2e329{{ end }}",
+            "{{ if gt .Ahead 0 }}#f2e329{{ end }}",
+            "{{ if gt .Behind 0 }#f2e329{{ end }}"
+          ],
+          "powerline_symbol": "\ue0b0",
+          "properties": {
+            "fetch_stash_count": true,
+            "fetch_status": true,
+            "fetch_upstream_icon": true,
+            "template": "{{ .UpstreamIcon }}{{ .HEAD }}{{ .BranchStatus }}{{ if .Staging.Changed }} \uF046 {{ .Staging.String }}{{ end }}{{ if and (.Working.Changed) (.Staging.Changed) }} |{{ end }}{{ if .Working.Changed }} \uF044 {{ .Working.String }}{{ end }}{{ if gt .StashCount 0 }} \uF692 {{ .StashCount }}{{ end }}"
+          },
+          "style": "powerline",
+          "type": "git"
+        }
+      ]
+    }
+  ]
+}
