@@ -10,7 +10,7 @@
           "type": "os",
           "style": "diamond",
           "foreground": "#FFFFFF",
-          "background": "#9b2400",
+          "background": "#832306",
           "leading_diamond": "\ue0b6",
           "template": " WSL {{.Icon}} ",
           "properties": {
@@ -49,6 +49,17 @@
           "foreground": "#ffffff",
           "background": "#9b2400",
           "template": " \ue791 {{ if .Error }}{{ .Error }}{{ else }}{{ .Full }}{{ end }} "
+        },
+        {
+          "background": "#832306",
+          "foreground": "#ffffff",
+          "powerline_symbol": "\ue0b0",
+          "properties": {
+            "fetch_version": true
+          },
+          "style": "powerline",
+          "template": " \uf898 {{ if .PackageManagerIcon }}{{ .PackageManagerIcon }} {{ end }}{{ .Full }} ",
+          "type": "node"
         },
         {
           "type": "git",
