@@ -91,6 +91,7 @@ fi
 alias ll='ls -alF'
 alias la='ls -A'
 alias l='ls -CF'
+
 # Custom aliases
 # git aliases
 alias gt='git'
@@ -107,7 +108,8 @@ alias rr='rails routes'
 alias be='bundle exec'
 # docker aliases
 alias dc='docker-compose'
-
+# console aliases
+alias clr='clear'
 # general aliases
 alias sspr='sudo service postgresql restart'
 alias ssrsr='sudo service redis-server restart'
@@ -135,13 +137,13 @@ if ! shopt -oq posix; then
     . /etc/bash_completion
   fi
 fi
-export PATH="$HOME/.rbenv/bin:$PATH"
+
+# rbenv
 export PATH="$HOME/.rbenv/bin:$PATH"
 eval "$(rbenv init -)"
 
+# Load Oh-my-posh
+eval "$(oh-my-posh --init --shell bash --config ~/.poshthemes/jblab_2021.omp.json)"
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-
-# Load Oh-my-posh
-eval "$(oh-my-posh --init --shell bash --config ~/.poshthemes/jblab_2021.omp.json)"
