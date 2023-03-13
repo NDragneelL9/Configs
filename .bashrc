@@ -101,6 +101,7 @@ alias gta='git add'
 alias gtc='git commit'
 alias gtp='git push'
 alias gtb='git branch'
+alias gtr='git reset'
 # rails aliases
 alias rc='rails console'
 alias rs='rails server'
@@ -108,12 +109,18 @@ alias rr='rails routes'
 alias be='bundle exec'
 # docker aliases
 alias dc='docker-compose'
-# console aliases
-alias clr='clear'
+# npm aliases
+alias nr='npm run'
+alias nrs='npm run start'
+alias nrss='npm run start -s'
+alias nlf='npm run lint-fix'
 # general aliases
+alias clr='clear'
 alias sspr='sudo service postgresql restart'
 alias ssrsr='sudo service redis-server restart'
-
+alias t='touch'
+alias c='code'
+alias md='mkdir'
 # Add an "alert" alias for long running commands.  Use like so:
 #   sleep 10; alert
 alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
