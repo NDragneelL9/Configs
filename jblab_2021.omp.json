@@ -12,7 +12,7 @@
           "foreground": "#FFFFFF",
           "background": "#832306",
           "leading_diamond": "\ue0b6",
-          "template": " WSL {{.Icon}} ",
+          "template": "{{.Icon}} ",
           "properties": {
             "wsl": "",
             "wsl_separator": ""
@@ -49,6 +49,14 @@
           "foreground": "#ffffff",
           "background": "#9b2400",
           "template": " \ue791 {{ if .Error }}{{ .Error }}{{ else }}{{ .Full }}{{ end }} "
+        },
+        {
+          "type": "java",
+          "style": "powerline",
+          "powerline_symbol": "\uE0B0",
+          "foreground": "#ffffff",
+          "background": "#4063D8",
+          "template": " \uE738 {{ .Full }}"
         },
         {
           "background": "#832306",
