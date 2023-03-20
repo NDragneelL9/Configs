@@ -59,7 +59,7 @@
           "template": " \uE738 {{ .Full }}"
         },
         {
-          "background": "#832306",
+          "background": "#178306",
           "foreground": "#ffffff",
           "powerline_symbol": "\ue0b0",
           "properties": {
