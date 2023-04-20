@@ -24,7 +24,7 @@
           "powerline_symbol": "\ue0b0",
           "foreground": "#ffffff",
           "background": "#535353",
-          "template": " {{ .CurrentDate | date .Format }} ",
+          "template": "{{ .CurrentDate | date .Format }}",
           "properties": {
             "time_format": "15:04"
           }
@@ -38,7 +38,7 @@
             "home_icon": "\uf07b"
           },
           "style": "powerline",
-          "template": " {{ .Path }} ",
+          "template": "{{ .Path }}",
           "powerline_symbol": "\ue0b0",
           "type": "path"
         },
