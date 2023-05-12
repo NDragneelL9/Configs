@@ -102,6 +102,7 @@ alias gtc='git commit'
 alias gtp='git push'
 alias gtb='git branch'
 alias gtr='git reset'
+alias gru='git remote update'
 # rails aliases
 alias rc='rails console'
 alias rs='rails server'
@@ -150,7 +151,11 @@ export PATH="$HOME/.rbenv/bin:$PATH"
 eval "$(rbenv init -)"
 
 # Load Oh-my-posh
-eval "$(oh-my-posh --init --shell bash --config ~/.poshthemes/jblab_2021.omp.json)"
+eval "$(oh-my-posh --init --shell bash --config ~/study/Configs/jblab_2021.omp.json)"
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+# set JAVA_HOME
+export JAVA_HOME="/usr/lib/jvm/java-11-openjdk-amd64"
+export PATH="$JAVA_HOME/bin:$PATH"
