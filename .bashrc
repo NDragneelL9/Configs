@@ -115,6 +115,9 @@ alias nr='npm run'
 alias nrs='npm run start'
 alias nrss='npm run start -s'
 alias nlf='npm run lint-fix'
+# maven aliases 
+alias mej='mvn exec:java'
+alias mcp='mvn clean package'
 # general aliases
 alias clr='clear'
 alias sspr='sudo service postgresql restart'
