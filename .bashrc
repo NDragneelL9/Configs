@@ -118,6 +118,7 @@ alias nlf='npm run lint-fix'
 # maven aliases 
 alias mej='mvn exec:java'
 alias mcp='mvn clean package'
+alias mcas='mvn compile assembly:single'
 # general aliases
 alias clr='clear'
 alias sspr='sudo service postgresql restart'
