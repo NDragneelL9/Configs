@@ -1,9 +1,11 @@
+ Install list (windows):
   - z folder jumper
   - scoop (windows only)
   - oh my posh
   - posh-git
   - git
   - nodejs
-  - Nerd Fonts  (Hack nerd Font)
+  - Nerd Fonts (Hack nerd Font)
   - inkDrop
   - Terminal-Icons
+  - Vscode
