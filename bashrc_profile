@@ -92,7 +92,6 @@ alias ll='ls -alF'
 alias la='ls -A'
 alias l='ls -CF'
 
-# Custom aliases
 # git aliases
 alias gt='git'
 alias gts='git status'
@@ -101,7 +100,6 @@ alias gta='git add'
 alias gtc='git commit'
 alias gtp='git push'
 alias gtb='git branch'
-alias gtr='git reset'
 alias gru='git remote update'
 # rails aliases
 alias rc='rails console'
@@ -112,9 +110,6 @@ alias be='bundle exec'
 alias dc='docker-compose'
 # npm aliases
 alias nr='npm run'
-alias nrs='npm run start'
-alias nrss='npm run start -s'
-alias nlf='npm run lint-fix'
 # maven aliases 
 alias mej='mvn exec:java'
 alias mcp='mvn clean package'
@@ -122,9 +117,10 @@ alias mcas='mvn compile assembly:single'
 # general aliases
 alias clr='clear'
 alias sspr='sudo service postgresql restart'
-alias ssrsr='sudo service redis-server restart'
 alias t='touch'
 alias c='code'
+alias cdr='code . -r'
+alias cdn='code . -n'
 alias md='mkdir'
 # Add an "alert" alias for long running commands.  Use like so:
 #   sleep 10; alert
@@ -155,10 +151,15 @@ export PATH="$HOME/.rbenv/bin:$PATH"
 eval "$(rbenv init -)"
 
 # Load Oh-my-posh
-eval "$(oh-my-posh --init --shell bash --config ~/study/Configs/jblab_2021.omp.json)"
+eval "$(oh-my-posh --init --shell bash --config ~/.config/bash/dragneell9.omp.json)"
+# nvm
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+# rbenv
+export PATH="$HOME/.rbenv/bin:$PATH"
+eval "$(rbenv init -)"
 
 # set JAVA_HOME
 export JAVA_HOME="/usr/lib/jvm/java-11-openjdk-amd64"

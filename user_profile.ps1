@@ -54,3 +54,11 @@ Set-Alias gtb Get-GitBranch
 
 function Get-GitRemote { & git remote update $args }
 Set-Alias gru Get-GitRemote
+
+# docker aliases
+function Run-DckCmp { & docker-compose $args }
+Set-Alias dc Run-DckCmp
+
+# npm aliases
+function Run-NpmRun { & npm run $args }
+Set-Alias nr Run-NpmRun
