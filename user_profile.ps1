@@ -11,6 +11,7 @@ oh-my-posh --init --shell pwsh --config $omp_config | Invoke-Expression
 # PSReadLine
 Set-PSReadLineKeyHandler -Chord 'Ctrl+d' -Function DeleteChar
 Set-PSReadLineOption -PredictionSource History
+Set-PSReadLineOption -PredictionViewStyle ListView
 
 # Fzf
 Set-PsFzfOption -PSReadlineChordReverseHistory 'Ctrl+r'
