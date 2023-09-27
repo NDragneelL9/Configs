@@ -33,7 +33,7 @@ scoop install nvm
 scoop install z
 
 # Install PSReadLine
-Install-Module -Name PSReadLine -AllowPrerelease -Scope CurrentUser -Force -SkipPublisherCheck
+Install-Module -Name PSReadLine -RequiredVersion 2.2.6 -Scope CurrentUser -Force
 
 # Create powershell dir
 mkdir $env:USERPROFILE\.config\powershell
