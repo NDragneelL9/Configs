@@ -1,4 +1,6 @@
 ### Install list (windows):
+Prerequisites:
+* winget
 #### Comes with script
   - [ ] Pwsh
 
@@ -12,14 +14,14 @@ In PowerShell Settings:
 7. In the section above -> Transparency -> Background capacity **35%**
 8. In the section above -> Transparency -> Enable Acrylic material  **On**
 
-  - [ ] scoop (windows only)
+  - [ ] scoop package manager
   - [ ] z folder jumper
   - [ ] Nerd Fonts (Hack nerd Font)
   - [ ] Terminal-Icons
   - [ ] oh my posh
   - [ ] posh-git
   - [ ] git
-  - [ ] nodejs
+  - [ ] PSReadline (command-line tool)
 
 #### Manually installed
   - [ ] [InkDrop](https://my.inkdrop.app/download)
