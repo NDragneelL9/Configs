@@ -29,6 +29,8 @@ Set-Alias cdn Code-NewWindown
 Set-Alias ink 'C:\Users\nell_\AppData\Local\inkdrop\Inkdrop.exe'
 function Run-ExplRun { & explorer . }
 Set-Alias e. Run-ExplRun
+function Run-Exit { exit }
+Set-Alias q Run-Exit
 
 # git aliases
 Set-Alias gt git
