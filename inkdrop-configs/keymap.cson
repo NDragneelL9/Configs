@@ -1,0 +1,8 @@
+'body':
+  'ctrl-/': 'view:toggle-side-by-side'
+  'ctrl-.': 'view:toggle-sidebar'
+  'ctrl-p': 'switch-notebook:toggle'
+  'ctrl-o': 'switch-note:open'
+  'ctrl-shift-t': 'inkdrop-note-templates:aamc-task'
+'global':
+  'ctrl-alt-x': 'application:toggle-main-window'
