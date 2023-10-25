@@ -50,8 +50,17 @@ Set-Alias gtc Set-GitCommit
 function Set-GitPush { & git push $args }
 Set-Alias gtp Set-GitPush
 
+function Set-GitPull { & git pull $args }
+Set-Alias gtpl Set-GitPull
+
+function Set-GitRestore { & git restore . $args }
+Set-Alias grs Set-GitRestore
+
 function Get-GitBranch { & git branch $args }
 Set-Alias gtb Get-GitBranch
+
+function Get-GitDiff { & git diff $args }
+Set-Alias gtd Get-GitDiff
 
 function Get-GitRemote { & git remote update $args }
 Set-Alias gru Get-GitRemote
