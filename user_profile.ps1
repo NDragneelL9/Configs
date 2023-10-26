@@ -62,6 +62,9 @@ Set-Alias gtb Get-GitBranch
 function Get-GitDiff { & git diff $args }
 Set-Alias gtd Get-GitDiff
 
+function Set-GitCheckout { & git checkout $args }
+Set-Alias gtcc Set-GitCheckout
+
 function Get-GitRemote { & git remote update $args }
 Set-Alias gru Get-GitRemote
 
