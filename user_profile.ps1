@@ -11,7 +11,7 @@ oh-my-posh --init --shell pwsh --config $omp_config | Invoke-Expression
 # PSReadLine
 Set-PSReadLineOption -PredictionSource History
 Set-PSReadLineOption -PredictionViewStyle ListView
-
+Set-PSReadLineOption -MaximumHistoryCount 1024 -HistoryNoDuplicates
 # Utilities
 function which ($command) {
   Get-Command -Name $command -ErrorAction SilentlyContinue |
