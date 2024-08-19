@@ -110,11 +110,10 @@
           "trailing_diamond": "\ue0b4",
           "foreground": "#3C873A",
           "background": "#000000",
-          "template": "\ue718 {{ if .PackageManagerIcon }}{{ .PackageManagerIcon }} {{ end }}{{ .Full }}",
+          "template": "\ue718 {{ if .PackageManagerIcon }}{{ .PackageManagerIcon }} {{ end }}{{ .Major }}.{{ .Minor}}",
           "properties": {
             "fetch_version": true,
-            "fetch_package_manager": true,
-            "npm_icon": " <#cc3a3a>\ue5fa</> "
+            "fetch_package_manager": true
           }
         },
         {
