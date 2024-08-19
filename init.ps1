@@ -5,9 +5,6 @@ winget install --id Microsoft.PowerShell --source winget
 # Install Git
 winget install -e --id Git.Git
 
-# Install PowerToys
-winget install Microsoft.PowerToys --source winget
-
 # Install scoop
 # First line is Optional: Needed to run a remote script the first time
 Set-ExecutionPolicy RemoteSigned -Scope CurrentUser

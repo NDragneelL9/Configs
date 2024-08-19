@@ -24,7 +24,6 @@ In PowerShell Settings:
   - [ ] PSReadline (command-line tool)
 
 #### Manually installed
-  - [ ] [InkDrop](https://my.inkdrop.app/download)
   - [ ] [VScode](https://code.visualstudio.com/)
   - [ ] [Teams](https://www.microsoft.com/en-us/microsoft-teams/download-app)
   - [ ] [Skype](https://www.skype.com/en/get-skype/)
@@ -35,7 +34,6 @@ In PowerShell Settings:
   - [ ] [KMPlayer](https://www.kmplayer.com/home)
   - [ ] [Obs](https://streamlabs.com/)
   - [ ] [Telegram](https://desktop.telegram.org/)
-  - [ ] [Outplayed](https://go.overwolf.com/outplayed/)
   - [ ] [uTorrent](https://www.utorrent.com/downloads/win/)
 
   ### Install list (Linux):

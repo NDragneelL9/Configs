@@ -5,6 +5,9 @@
 Import-Module posh-git
 Import-Module Terminal-Icons
 
+# ENV variables
+$env:PYTHONIOENCODING = "UTF-8"
+
 # Oh-my-posh init
 $omp_config = Join-Path $PSScriptRoot ".\dragneell9.omp.json"
 oh-my-posh --init --shell pwsh --config $omp_config | Invoke-Expression
@@ -22,11 +25,15 @@ function which ($command) {
 Set-Alias ll ls
 Set-Alias grep findstr
 Set-Alias clr clear
+Set-Alias pn pnpm
 function Code-Reopen { & code . -r }
 Set-Alias cdr Code-Reopen
 function Code-NewWindown { & code . -n }
 Set-Alias cdn Code-NewWindown
-Set-Alias ink 'C:\Users\nell_\AppData\Local\inkdrop\Inkdrop.exe'
+function Open-Aamc { & z 'D:\Work\aamc\outlook-workday-integration' }
+Set-Alias aamc Open-Aamc
+function Open-AQCOM { & z 'D:\Work\AQCOM\' }
+Set-Alias aqcom Open-AQCOM
 function Run-ExplRun { & explorer . }
 Set-Alias e. Run-ExplRun
 function Run-Exit { exit }

@@ -99,21 +99,13 @@ alias gtl='git log --graph --decorate'
 alias gta='git add'
 alias gtc='git commit'
 alias gtp='git push'
+alias gtpl='git pull'
 alias gtb='git branch'
 alias gru='git remote update'
-# rails aliases
-alias rc='rails console'
-alias rs='rails server'
-alias rr='rails routes'
-alias be='bundle exec'
 # docker aliases
 alias dc='docker-compose'
 # npm aliases
 alias nr='npm run'
-# maven aliases 
-alias mej='mvn exec:java'
-alias mcp='mvn clean package'
-alias mcas='mvn compile assembly:single'
 # general aliases
 alias clr='clear'
 alias sspr='sudo service postgresql restart'
@@ -146,9 +138,6 @@ if ! shopt -oq posix; then
   fi
 fi
 
-# rbenv
-export PATH="$HOME/.rbenv/bin:$PATH"
-eval "$(rbenv init -)"
 
 # Load Oh-my-posh
 eval "$(oh-my-posh --init --shell bash --config ~/.config/bash/dragneell9.omp.json)"
@@ -156,11 +145,3 @@ eval "$(oh-my-posh --init --shell bash --config ~/.config/bash/dragneell9.omp.js
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-
-# rbenv
-export PATH="$HOME/.rbenv/bin:$PATH"
-eval "$(rbenv init -)"
-
-# set JAVA_HOME
-export JAVA_HOME="/usr/lib/jvm/java-11-openjdk-amd64"
-export PATH="$JAVA_HOME/bin:$PATH"
