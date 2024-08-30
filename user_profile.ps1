@@ -25,7 +25,6 @@ function which ($command) {
 Set-Alias ll ls
 Set-Alias grep findstr
 Set-Alias clr clear
-Set-Alias pn pnpm
 function Code-Reopen { & code . -r }
 Set-Alias cdr Code-Reopen
 function Code-NewWindown { & code . -n }
@@ -82,3 +81,6 @@ Set-Alias dc Run-DckCmp
 # npm aliases
 function Run-NpmRun { & npm run $args }
 Set-Alias nr Run-NpmRun
+
+Set-Alias pn pnpm
+Set-Alias pnx pnpm dlx
