@@ -83,4 +83,6 @@ function Run-NpmRun { & npm run $args }
 Set-Alias nr Run-NpmRun
 
 Set-Alias pn pnpm
-Set-Alias pnx pnpm dlx
+
+function Run-PnpmDlx { & pnpm dlx $args }
+Set-Alias pnx Run-PnpmDlx
