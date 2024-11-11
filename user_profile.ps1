@@ -30,7 +30,7 @@ Set-Alias cdr Code-Reopen
 function Code-NewWindown { & code . -n }
 Set-Alias cdn Code-NewWindown
 function Open-Okko { & z 'D:\Work\Modsen\Okko' }
-Set-Alias aamc Open-Okko
+Set-Alias okko Open-Okko
 function Run-ExplRun { & explorer . }
 Set-Alias e. Run-ExplRun
 function Run-Exit { exit }
