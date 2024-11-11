@@ -14,7 +14,7 @@ oh-my-posh --init --shell pwsh --config $omp_config | Invoke-Expression
 # PSReadLine
 Set-PSReadLineOption -PredictionSource History
 Set-PSReadLineOption -PredictionViewStyle ListView
-Set-PSReadLineOption -MaximumHistoryCount 1024 -HistoryNoDuplicates
+Set-PSReadLineOption -MaximumHistoryCount 512 -HistoryNoDuplicates
 # Utilities
 function which ($command) {
   Get-Command -Name $command -ErrorAction SilentlyContinue |
@@ -29,14 +29,14 @@ function Code-Reopen { & code . -r }
 Set-Alias cdr Code-Reopen
 function Code-NewWindown { & code . -n }
 Set-Alias cdn Code-NewWindown
-function Open-Aamc { & z 'D:\Work\aamc\outlook-workday-integration' }
-Set-Alias aamc Open-Aamc
-function Open-AQCOM { & z 'D:\Work\AQCOM\' }
-Set-Alias aqcom Open-AQCOM
+function Open-Okko { & z 'D:\Work\Modsen\Okko' }
+Set-Alias aamc Open-Okko
 function Run-ExplRun { & explorer . }
 Set-Alias e. Run-ExplRun
 function Run-Exit { exit }
 Set-Alias q Run-Exit
+function Open-Lol { & z 'D:\LoL' }
+Set-Alias lol Open-lol
 
 # git aliases
 Set-Alias gt git
