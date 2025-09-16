@@ -19,20 +19,18 @@ In PowerShell Settings:
   - [ ] Nerd Fonts (Hack nerd Font)
   - [ ] Terminal-Icons
   - [ ] oh my posh
-  - [ ] posh-git
   - [ ] git
   - [ ] PSReadline (command-line tool)
 
 #### Manually installed
   - [ ] [VScode](https://code.visualstudio.com/)
   - [ ] [Teams](https://www.microsoft.com/en-us/microsoft-teams/download-app)
-  - [ ] [Skype](https://www.skype.com/en/get-skype/)
   - [ ] [Discord](https://discord.com/download)
   - [ ] [Steam](https://store.steampowered.com/about/)
   - [ ] [Battle.net](https://www.blizzard.com/en-gb/)
   - [ ] [Foxit](https://www.foxit.com/pdf-reader/)
-  - [ ] [KMPlayer](https://www.kmplayer.com/home)
-  - [ ] [Obs](https://streamlabs.com/)
+  - [ ] [VLC](https://www.videolan.org/vlc/index.html)
+  - [ ] [Streamlabs](https://streamlabs.com/)
   - [ ] [Telegram](https://desktop.telegram.org/)
   - [ ] [uTorrent](https://www.utorrent.com/downloads/win/)
 
