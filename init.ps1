@@ -14,14 +14,12 @@ irm get.scoop.sh | iex
 scoop install curl sudo
 scoop bucket add extras
 scoop bucket add nerd-fonts
+scoop install terminal-icons
 scoop install Hack-NF
 
 # Install Oh-my-posh
 Install-Module posh-git -Scope CurrentUser -Force 
 scoop install https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/oh-my-posh.json
-
-# Install Terminal-Icons
-Install-Module -Name Terminal-Icons -Repository PSGallery -Force
 
 # Install nvm 
 scoop install nvm

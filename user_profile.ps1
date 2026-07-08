@@ -29,14 +29,10 @@ function Code-Reopen { & code . -r }
 Set-Alias cdr Code-Reopen
 function Code-NewWindown { & code . -n }
 Set-Alias cdn Code-NewWindown
-function Open-Okko { & z 'D:\Work\Modsen\Okko' }
-Set-Alias okko Open-Okko
 function Run-ExplRun { & explorer . }
 Set-Alias e. Run-ExplRun
 function Run-Exit { exit }
 Set-Alias q Run-Exit
-function Open-Lol { & z 'D:\LoL' }
-Set-Alias lol Open-lol
 
 # git aliases
 Set-Alias gt git
@@ -59,14 +55,8 @@ Set-Alias gtp Set-GitPush
 function Set-GitPull { & git pull $args }
 Set-Alias gtpl Set-GitPull
 
-function Set-GitRestore { & git restore . $args }
-Set-Alias grs Set-GitRestore
-
 function Get-GitBranch { & git branch $args }
 Set-Alias gtb Get-GitBranch
-
-function Get-GitDiff { & git diff $args }
-Set-Alias gtd Get-GitDiff
 
 function Set-GitCheckout { & git checkout $args }
 Set-Alias gtcc Set-GitCheckout
@@ -81,8 +71,3 @@ Set-Alias dc Run-DckCmp
 # npm aliases
 function Run-NpmRun { & npm run $args }
 Set-Alias nr Run-NpmRun
-
-Set-Alias pn pnpm
-
-function Run-PnpmDlx { & pnpm dlx $args }
-Set-Alias pnx Run-PnpmDlx
