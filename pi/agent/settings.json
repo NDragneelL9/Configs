@@ -1,0 +1,34 @@
+{
+  "lastChangelogVersion": "1.6.0",
+  "theme": "ayu-dark",
+  "quietStartup": "header",
+  "defaultProvider": "zai",
+  "defaultModel": "glm-5.3",
+  "packages": [
+    {
+      "source": "npm:pi-subagents",
+      "prompts": []
+    },
+    {
+      "source": "npm:@upstash/context7-pi",
+      "prompts": []
+    },
+    "npm:pi-web-access"
+  ],
+  "extensionChangelogVersions": {
+    "{\"source\":\"npm:pi-subagents\",\"scope\":\"user\"}": "0.89.2",
+    "{\"source\":\"npm:pi-web-access\",\"scope\":\"user\"}": "0.48.0"
+  },
+  "extensions": [],
+  "enabledModels": [
+    "opencode-go/claude-haiku-5-5",
+    "opencode-go/gemini-4-argon",
+    "opencode-go/kimi-k3",
+    "opencode-go/kimi-k3.1-pro",
+    "opencode-go/gpt-6-luna",
+    "opencode-go/grok-4.7",
+    "zai/glm-5.3",
+    "zai/glm-5.3-flash"
+  ],
+  "defaultThinkingLevel": "medium"
+}

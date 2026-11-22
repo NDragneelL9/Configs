@@ -1,0 +1,31 @@
+{
+  "$schema": "https://pi.dev/schemas/models.schema.json",
+  "providers": {
+    "lmstudio": {
+      "name": "LM Studio",
+      "baseUrl": "http://localhost:1234/v1",
+      "api": "openai-completions",
+      "apiKey": "lmstudio",
+      "models": [
+        {
+          "id": "openai/gpt-oss-20b",
+          "name": "GPT-OSS 20B",
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "off": null,
+            "minimal": null,
+            "low": "low",
+            "medium": "medium",
+            "high": "high"
+          },
+          "input": ["text"],
+          "contextWindow": 65536,
+          "maxTokens": 16384,
+          "compat": {
+            "thinkingFormat": "openai"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -4,3 +4,4 @@
 + bashrc_profile
 + pwsh profile
 + init.ps1 powershell script for **windows**
++ pi coding agent config (`pi/`) — backup/restore scripts

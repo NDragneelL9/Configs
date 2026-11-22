@@ -1,0 +1,31 @@
+{
+  "mcpServers": {
+    "obsidian": {
+      "url": "https://127.0.0.1:27124/mcp/",
+      "headers": {
+        "Authorization": "Bearer <<OBSIDIAN_TOKEN>>"
+      },
+      "exposure": "codemode",
+      "toolExposure": {
+        "vault_list": "direct",
+        "vault_read": "direct",
+        "vault_write": "direct",
+        "vault_append": "direct",
+        "vault_patch": "direct",
+        "search_simple": "direct"
+      },
+      "description": "Obsidian vault D:\\Z\\ObVault: низкоуровневые инструменты. Заметки и задачи — сначала прочитай скилл obsidian-notes и выполняй его шаги"
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest"
+      ],
+      "env": {
+        "npm_config_registry": "https://registry.npmjs.org/"
+      },
+      "description": "Chrome DevTools for agents: control and inspect a live Chrome browser — automation, debugging, network/console analysis, performance traces, screenshots"
+    }
+  }
+}
