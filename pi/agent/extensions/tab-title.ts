@@ -140,6 +140,43 @@ export default function (pi: ExtensionAPI) {
 	let labelPromise: Promise<string | undefined> | undefined; // in-flight label call
 	let lastAutoName: string | undefined; // session name we set ourselves
 
+	// ─── Session-replacement hardening ────────────────────────────────────────
+	// After ctx.newSession()/fork()/switchSession()/reload() every captured ctx
+	// or pi object is stale: ANY property access (even ctx.hasUI) throws pi's
+	// stale-ctx error. Deferred callbacks that outlive their session must never
+	// touch them unguarded — one such escape from a setTimeout crashed pi
+	// outright (2026-11-23). Two defenses: cancel pending timers on
+	// session_shutdown, and swallow stale-ctx errors in deferred callbacks.
+	const pendingTimers = new Set<ReturnType<typeof setTimeout>>();
+
+	/** setTimeout that untracks itself on fire and is cancellable wholesale. */
+	function later(fn: () => void, ms: number): void {
+		const t = setTimeout(() => {
+			pendingTimers.delete(t);
+			fn();
+		}, ms);
+		pendingTimers.add(t);
+	}
+
+	/** Cancel every scheduled title re-apply (session_shutdown, session_start). */
+	function cancelPending(): void {
+		for (const t of pendingTimers) clearTimeout(t);
+		pendingTimers.clear();
+	}
+
+	/**
+	 * Run a deferred ctx touch, swallowing the stale-ctx error. A skipped
+	 * cosmetic re-apply is always the right outcome: the session that replaced
+	 * this one titles itself.
+	 */
+	function safeRun(fn: () => void): void {
+		try {
+			fn();
+		} catch {
+			/* stale ctx — session was replaced/reloaded while we waited */
+		}
+	}
+
 	function apply(ctx: ExtensionContext, title: string, persist = false): void {
 		if (!ctx.hasUI || !title) return;
 		ctx.ui.setTitle(title);
@@ -155,19 +192,19 @@ export default function (pi: ExtensionAPI) {
 	function applyArmored(ctx: ExtensionContext, title: string, persist = false): void {
 		if (!ctx.hasUI || !title) return;
 		if (persist) pi.appendEntry(ENTRY_TYPE, { title });
-		const set = () => {
+		const set = () => safeRun(() => {
 			if (!manual && ctx.hasUI) ctx.ui.setTitle(title);
-		};
+		});
 		set();
-		for (const ms of [150, 1000, 3000]) setTimeout(set, ms);
+		for (const ms of [150, 1000, 3000]) later(set, ms);
 	}
 
 	/** pi also rewrites the title itself (startup, /name); apply slightly later to win. */
 	function applySoon(ctx: ExtensionContext, title: string, persist = false, againMs?: number): void {
 		if (!ctx.hasUI || !title) return;
-		setTimeout(() => ctx.ui.setTitle(title), 60);
+		later(() => safeRun(() => ctx.ui.setTitle(title)), 60);
 		if (persist) pi.appendEntry(ENTRY_TYPE, { title });
-		if (againMs) setTimeout(() => ctx.ui.setTitle(title), againMs);
+		if (againMs) later(() => safeRun(() => ctx.ui.setTitle(title)), againMs);
 	}
 
 	async function gitBranch(piApi: ExtensionAPI, cwd: string): Promise<string | undefined> {
@@ -227,6 +264,7 @@ export default function (pi: ExtensionAPI) {
 	}
 
 	pi.on("session_start", (event, ctx) => {
+		cancelPending(); // defensive: never inherit timers across a session boundary
 		titled = false;
 		manual = false;
 		firstInput = undefined;
@@ -254,6 +292,14 @@ export default function (pi: ExtensionAPI) {
 		if (ctx.sessionManager.getSessionName()) manual = true;
 	});
 
+	// The primary crash fix: this instance is being torn down
+	// (quit/reload/new/resume/fork) — kill the scheduled title re-applies before
+	// their captured ctx turns stale. safeRun() covers continuations that
+	// already fired past this point.
+	pi.on("session_shutdown", () => {
+		cancelPending();
+	});
+
 	pi.on("input", (event) => {
 		if (firstInput || !event.text || event.source === "extension") return;
 		if (event.text.startsWith("/")) {
@@ -279,9 +325,10 @@ export default function (pi: ExtensionAPI) {
 		const interimCwd = constrainLabel(basename(ctx.cwd));
 		if (interimCwd) ctx.ui.setTitle(INTERIM_PREFIX + interimCwd);
 		if (INTERIM_FROM_BRANCH) {
-			const branch = await gitBranch(pi, ctx.cwd);
-			const interim = constrainLabel(branch ? shortBranch(branch) : basename(ctx.cwd));
-			if (interim && !titled && !manual) ctx.ui.setTitle(INTERIM_PREFIX + interim);
+			const cwd = ctx.cwd; // read before the await: ctx access throws once stale
+			const branch = await gitBranch(pi, cwd);
+			const interim = constrainLabel(branch ? shortBranch(branch) : basename(cwd));
+			if (interim && !titled && !manual) safeRun(() => ctx.ui.setTitle(INTERIM_PREFIX + interim));
 		}
 
 		// Kick off the label call in parallel with the agent run: the final
@@ -289,15 +336,17 @@ export default function (pi: ExtensionAPI) {
 		// agent finishes answering.
 		const sessionId = ctx.sessionManager.getSessionId();
 		labelPromise = USE_MODEL_LABEL ? modelLabel(ctx, prompt) : Promise.resolve(undefined);
-		void labelPromise.then((raw) => {
-			if (titled || manual || !ctx.hasUI) return; // user overrode / fallback already ran
-			if (ctx.sessionManager.getSessionId() !== sessionId) return; // session switched mid-run
-			const label = pickLabel(raw);
-			if (!label) return; // empty answer: let agent_settled use the heuristic
-			titled = true;
-			pendingPrompt = undefined;
-			applyArmored(ctx, label, true);
-		});
+		void labelPromise.then((raw) =>
+			safeRun(() => {
+				if (titled || manual || !ctx.hasUI) return; // user overrode / fallback already ran
+				if (ctx.sessionManager.getSessionId() !== sessionId) return; // session switched mid-run
+				const label = pickLabel(raw);
+				if (!label) return; // empty answer: let agent_settled use the heuristic
+				titled = true;
+				pendingPrompt = undefined;
+				applyArmored(ctx, label, true);
+			}),
+		);
 	});
 
 	pi.on("agent_settled", async (event, ctx) => {
@@ -311,26 +360,33 @@ export default function (pi: ExtensionAPI) {
 		pendingPrompt = undefined;
 		const sessionId = ctx.sessionManager.getSessionId();
 
-		// Await the in-flight call instead of starting a duplicate.
-		let label = await (labelPromise ?? modelLabel(ctx, prompt));
-		label = pickLabel(label, heuristicLabel(prompt));
-		if (!label) {
-			const branch = await gitBranch(pi, ctx.cwd);
-			label = constrainLabel(branch ? shortBranch(branch) : basename(ctx.cwd));
-		}
-		if (!label) return;
-		// The session may have been switched/replaced while the label call ran.
-		if (ctx.sessionManager.getSessionId() !== sessionId) return;
-
-		applyArmored(ctx, label, true);
-
-		if (ALSO_SET_SESSION_NAME) {
-			lastAutoName = label.slice(0, 60);
-			try {
-				pi.setSessionName(lastAutoName);
-			} catch {
-				/* ignore */
+		// Await the in-flight call instead of starting a duplicate. Everything
+		// below runs after awaits, so the whole tail is stale-ctx-guarded: the
+		// session may have been replaced/reloaded while the label call ran.
+		const cwd = ctx.cwd; // read before awaiting: ctx access throws once stale
+		try {
+			let label = await (labelPromise ?? modelLabel(ctx, prompt));
+			label = pickLabel(label, heuristicLabel(prompt));
+			if (!label) {
+				const branch = await gitBranch(pi, cwd);
+				label = constrainLabel(branch ? shortBranch(branch) : basename(cwd));
 			}
+			if (!label) return;
+			// The session may have been switched/replaced while the label call ran.
+			if (ctx.sessionManager.getSessionId() !== sessionId) return;
+
+			applyArmored(ctx, label, true);
+
+			if (ALSO_SET_SESSION_NAME) {
+				lastAutoName = label.slice(0, 60);
+				try {
+					pi.setSessionName(lastAutoName);
+				} catch {
+					/* ignore */
+				}
+			}
+		} catch {
+			/* stale ctx — session replaced/reloaded while the label call ran */
 		}
 	});
 

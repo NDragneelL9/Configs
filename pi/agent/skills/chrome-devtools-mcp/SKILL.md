@@ -44,8 +44,8 @@ const text = snap.content.map(c => c.text ?? '').join('\n')
 // 3b. Скриншот — показать пользователю
 const shot = await tools.mcp__chrome_devtools__take_screenshot({ pageId: 1 })
 image(shot.content.find(c => c.type === 'image'))
-// image()-вложения анализирует модель сессии с image-входом: glm-5.3 — text-only,
-// скриншоты смотри на glm-5.3-flash; на text-only модели ориентируйся по take_snapshot (3a)
+// image()-вложения (скриншоты и картинки) смотрит только glm-5.4 (AGENTS.md, «Subagent models»);
+// на другой модели анализ скриншота — субагенту с model: zai/glm-5.4 или ориентируйся по take_snapshot (3a)
 
 // 4. Диагностика
 const msgs = await tools.mcp__chrome_devtools__list_console_messages({ pageId: 1 })

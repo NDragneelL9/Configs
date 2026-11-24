@@ -3,7 +3,7 @@
   "theme": "ayu-dark",
   "quietStartup": "header",
   "defaultProvider": "zai",
-  "defaultModel": "glm-5.3",
+  "defaultModel": "glm-5.4",
   "packages": [
     {
       "source": "npm:pi-subagents",
@@ -16,7 +16,7 @@
     "npm:pi-web-access"
   ],
   "extensionChangelogVersions": {
-    "{\"source\":\"npm:pi-subagents\",\"scope\":\"user\"}": "0.89.2",
+    "{\"source\":\"npm:pi-subagents\",\"scope\":\"user\"}": "0.90.0",
     "{\"source\":\"npm:pi-web-access\",\"scope\":\"user\"}": "0.48.0"
   },
   "extensions": [],
@@ -28,7 +28,38 @@
     "opencode-go/gpt-6-luna",
     "opencode-go/grok-4.7",
     "zai/glm-5.3",
-    "zai/glm-5.3-flash"
+    "zai/glm-5.3-flash",
+    "zai/glm-5.4"
   ],
-  "defaultThinkingLevel": "medium"
+  "defaultThinkingLevel": "medium",
+  "subagents": {
+    "defaultModel": "zai/glm-5.3-flash",
+    "defaultInheritGlobalContext": true,
+    "agentOverrides": {
+      "reviewer": {
+        "model": "zai/glm-5.4"
+      },
+      "oracle": {
+        "model": "zai/glm-5.4"
+      },
+      "claude-code": {
+        "disabled": true
+      },
+      "claude-code-writer": {
+        "disabled": true
+      },
+      "codex-exec": {
+        "disabled": true
+      },
+      "codex-exec-writer": {
+        "disabled": true
+      },
+      "cursor-agent": {
+        "disabled": true
+      },
+      "cursor-agent-writer": {
+        "disabled": true
+      }
+    }
+  }
 }

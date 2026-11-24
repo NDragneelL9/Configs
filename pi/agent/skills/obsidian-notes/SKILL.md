@@ -10,7 +10,30 @@ description: >-
 
 # Obsidian Notes
 
-Vault: `D:\Z\ObVault`. Obsidian должен быть запущен (MCP-сервер живёт внутри плагина).
+Vault: `D:\Z\ObVault`. Obsidian должен быть запущен, а MCP-сервер включён — любую работу начинай с шага 0.
+
+## Шаг 0. Obsidian запущен, MCP-сервер включён
+
+Обязателен перед любой работой с Obsidian (лестница ниже и reference-сценарии). MCP-сервер `obsidian` изначально выключен (`"enabled": false` в `~/.pi/agent/mcp.json`); после первого ручного включения пользователем он остаётся включённым постоянно — warning на старте pi без запущенного Obsidian считается нормой.
+
+1. Подними Obsidian сам, не спрашивая пользователя:
+
+```bash
+bash C:/Users/JohnDoe_it/.pi/agent/skills/obsidian-notes/scripts/launch.sh
+```
+
+   Печатает `up=already` (был запущен) или `up=launched` (запустили сейчас и дождались Local REST API, до 60 с). `ERR:` → Obsidian не поднялся или плагин Local REST API не отвечает: сообщи пользователю текст ошибки и остановись.
+
+2. Проверь в codemode, что MCP-сервер включён:
+
+```js
+const found = await searchTools("vault", { namespace: "mcp__obsidian" });
+```
+
+- Нашлись инструменты (`vault_read`, `vault_patch`, …) → всё готово, продолжай.
+- Пусто → сервер выключен: попроси пользователя «включи MCP-сервер: набери `/mcp`, выбери obsidian → Enable». Жди подтверждения, проверь снова — не продолжай, пока проверка не пройдена. Если после Enable снова пусто — `/mcp` → obsidian → Reconnect.
+
+Сервер obsidian не выключай обратно и `~/.pi/agent/mcp.json` не правь: после первого ручного включения он остаётся включённым.
 
 ## Дневная заметка: 4 шага
 
@@ -30,7 +53,7 @@ created=false
 heading=Monday, November 30th, 2026
 ```
 
-Готово, когда в выводе есть `path` и `heading` — запомни оба, они нужны дальше. При ошибке скрипт печатает `ERR: ...` (Obsidian не запущен, дата не распознана): сообщи пользователю текст ошибки и остановись.
+Готово, когда в выводе есть `path` и `heading` — запомни оба, они нужны дальше. При ошибке скрипт печатает `ERR: ...` (Obsidian не запущен — вернись к шагу 0; дата не распознана): сообщи пользователю текст ошибки и остановись.
 
 ### Шаг 2. Прочитать заметку
 
@@ -97,7 +120,7 @@ vault_patch {
 
 ## Reference: остальные сценарии
 
-MCP-сервер `obsidian` настроен в Pi (user-level `~/.pi/agent/mcp.json`). Direct-инструменты: `vault_read`, `vault_write`, `vault_append`, `vault_patch`, `vault_list`, `search_simple`. Остальные (`vault_get_document_map`, `vault_delete`, `vault_move`, `vault_copy`, `search_query`, `command_execute`, `open_file`, `periodic_note_get_path`, `tag_list`) — через codemode.
+MCP-сервер `obsidian` настроен в Pi (user-level `~/.pi/agent/mcp.json`), по умолчанию выключен — перед любым сценарием сначала шаг 0. Direct-инструменты: `vault_read`, `vault_write`, `vault_append`, `vault_patch`, `vault_list`, `search_simple`. Остальные (`vault_get_document_map`, `vault_delete`, `vault_move`, `vault_copy`, `search_query`, `command_execute`, `open_file`, `periodic_note_get_path`, `tag_list`) — через codemode.
 
 ### Обычная заметка
 
@@ -117,7 +140,7 @@ MCP-сервер `obsidian` настроен в Pi (user-level `~/.pi/agent/mcp.
 
 ### REST напрямую
 
-`scripts/api.sh METHOD PATH [BODY] [CT]` — обёртка над Local REST API, сама подставляет ключ и CA-сертификат (HTTP-клиент — node fetch). Пустое тело — аргумент `""`; отсутствие аргумента = запрос без тела. `scripts/wait_render.sh <путь-в-vault>` — ждёт завершения асинхронного рендера Templater (0.4–1.3 с), таймаут 10 с → код 1.
+`scripts/api.sh METHOD PATH [BODY] [CT]` — обёртка над Local REST API, сама подставляет ключ и CA-сертификат (HTTP-клиент — node fetch). Пустое тело — аргумент `""`; отсутствие аргумента = запрос без тела. `scripts/wait_render.sh <путь-в-vault>` — ждёт завершения асинхронного рендера Templater (0.4–1.3 с), таймаут 10 с → код 1. `scripts/launch.sh` — запускает Obsidian и ждёт готовности Local REST API (шаг 0).
 
 Периодические эндпоинты: `/periodic/daily/Y/M/D/` — любая дата (используется daily.sh; POST идемпотентен); `/periodic/weekly/Y/M/D/` — маршрут существует; monthly/quarterly/yearly — 400. POST/PUT/PATCH создают заметку при отсутствии.
 

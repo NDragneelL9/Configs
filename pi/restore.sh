@@ -43,6 +43,9 @@ if [ -d "$SRC_AGENT/npm" ]; then
     if [ -f "$SRC_AGENT/npm/$f" ]; then cp "$SRC_AGENT/npm/$f" "$AGENT_DST/npm/$f"; fi
   done
 fi
+# npm ci здесь не нужен: peer-зависимости пакетов pi ссылаются на ядро pi,
+# которое живёт в managed-установке — pi сам ставит пакеты из settings.json
+# при первом запуске (с подавлением peer-установки).
 
 echo "==> Копируем скиллы в ~/.agents"
 if [ -d "$SRC_AGENTS/skills" ]; then
@@ -63,9 +66,7 @@ elif [ -f "$AGENT_DST/mcp.json" ] && grep -q '<<OBSIDIAN_TOKEN>>' "$AGENT_DST/mc
 fi
 
 echo "==> Ставим npm-пакеты pi (pi-subagents, context7-pi, pi-web-access)"
-if [ -f "$AGENT_DST/npm/package.json" ]; then
-  (cd "$AGENT_DST/npm" && npm ci)
-fi
+# — отдельного шага нет: пакеты ставит сам pi при первом запуске из settings.json
 
 cat <<'EOF'
 
@@ -77,5 +78,7 @@ cat <<'EOF'
 2. Сертификат Obsidian Local REST API: в Obsidian (Настройки -> Local
    REST API) скачай сертификат и положи в
    ~/.pi/agent/obsidian-local-rest-api.crt
-3. Запусти pi — темы, расширения, модели и MCP подхватятся из settings.json.
+3. Запусти pi — темы, расширения, модели и MCP подхватятся из settings.json;
+   npm-пакеты (pi-subagents, context7-pi, pi-web-access) поставятся сами
+   при первом запуске.
 EOF
