@@ -21,6 +21,9 @@ function which ($command) {
     Select-Object -ExpandProperty Path -ErrorAction SilentlyContinue
 }
 
+# Fast Node Manager
+fnm env --use-on-cd --shell powershell | Out-String | Invoke-Expression
+
 # general Aliases
 Set-Alias ll ls
 Set-Alias grep findstr
@@ -60,6 +63,9 @@ Set-Alias gtb Get-GitBranch
 
 function Set-GitCheckout { & git checkout $args }
 Set-Alias gtcc Set-GitCheckout
+
+function Set-GitCheckoutMaster { & git checkout master $args }
+Set-Alias gtcm Set-GitCheckoutMaster
 
 function Get-GitRemote { & git remote update $args }
 Set-Alias gru Get-GitRemote

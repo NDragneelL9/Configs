@@ -7,7 +7,7 @@
       "alignment": "left",
       "segments": [
         {
-          "properties": {
+          "options": {
             "cache_duration": "none"
           },
           "template": " {{ .Shell }}",
@@ -17,7 +17,7 @@
           "style": "accordion"
         },
         {
-          "properties": {
+          "options": {
             "cache_duration": "none",
             "root_icon": "\uf292"
           },
@@ -28,7 +28,7 @@
           "style": "diamond"
         },
         {
-          "properties": {
+          "options": {
             "cache_duration": "none",
             "folder_separator_icon": "/",
             "max_depth": 1,
@@ -42,7 +42,7 @@
           "style": "powerline"
         },
         {
-          "properties": {
+          "options": {
             "branch_icon": "\ue725 ",
             "cache_duration": "none",
             "fetch_status": true,
@@ -68,7 +68,7 @@
       "alignment": "right",
       "segments": [
         {
-          "properties": {
+          "options": {
             "always_enabled": true,
             "cache_duration": "none",
             "style": "austin",
@@ -83,10 +83,12 @@
           "style": "diamond"
         },
         {
-          "properties": {
+          "options": {
+            "home_enabled": true,
             "cache_duration": "none",
             "fetch_package_manager": true,
             "fetch_version": true,
+            "display_mode": "always",
             "npm_icon": "<#cc3a3a>\ue71e</>",
             "pnpm_icon": "<#FFA640>\ue71e</>",
             "yarn_icon": "<#66016D>\ue6a7</>"
@@ -100,7 +102,7 @@
           "style": "diamond"
         },
         {
-          "properties": {
+          "options": {
             "cache_duration": "none",
             "time_format": "15:04"
           },
@@ -119,7 +121,7 @@
       "alignment": "left",
       "segments": [
         {
-          "properties": {
+          "options": {
             "cache_duration": "none"
           },
           "template": " \udb81\ude0d ",
