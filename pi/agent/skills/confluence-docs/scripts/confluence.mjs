@@ -1,66 +1,52 @@
 #!/usr/bin/env node
-// v2: URL-based Confluence pipeline with OSS sanitization (gitleaks + Presidio).
-// The agent works ONLY with sanitized cache files produced here — never with raw pages.
+// v3: manual-download Confluence pipeline. SSO blocks scripted fetching, so the
+// user exports pages by hand (Export to Word / Ctrl+S HTML); this tool converts
+// them to markdown and gates the agent read with gitleaks + a suspects scan.
+//
+// Trust model: PII stripping is manual (fail-visible — the suspects list guides
+// the user), secrets detection stays automatic (fail-closed).
 //
 // Usage:
-//   confluence.mjs check                          — verify environment (fail-closed gate)
-//   confluence.mjs fetch <url> [--fresh]          — download + convert + sanitize + cache
-//   confluence.mjs fetch <url> --html <file>      — sanitize agent-saved HTML (Chrome MCP fallback)
-//   confluence.mjs lookup <term>                  — reverse search in pseudonym mappings
-//   confluence.mjs open-mappings                  — open mappings.json in an external viewer
-//
-// Download strategy: anonymous REST (storage format) -> rendered HTML (#main-content).
-// On SSO both fail with exit code 2 and a hint: agent must save the page HTML via
-// Chrome (chrome-devtools MCP) and re-run with --html <file>.
+//   confluence.mjs check                          — verify environment
+//   confluence.mjs to-md <in.doc|in.docx|in.html> [--out <file.md>]
+//                                                  — convert, then auto-run mdcheck
+//                                                  on the output: report merged
+//                                                  into the JSON, exit code =
+//                                                  mdcheck's (0/1/3), so a dirty
+//                                                  md is never read by a chained
+//                                                  command (2 = conversion error)
+//   confluence.mjs mdcheck <file.md>              — gate: exit 0 clean,
+//                                                  1 secrets (hard stop),
+//                                                  2 tool error, 3 suspects only
+//   confluence.mjs stats <file.md>                — structure counters only
+//                                                  (lines/tables/duplicates/css);
+//                                                  never prints content — the one
+//                                                  sanctioned look at an un-gated
+//                                                  to-md output
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
-import { join, dirname, basename } from 'node:path';
+import { dirname, join, resolve, basename, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import domino from 'domino';
 import TurndownService from 'turndown';
 import * as gfmPkg from 'turndown-plugin-gfm';
+import mammoth from 'mammoth';
 
 process.noDeprecation = true;
 const here = dirname(fileURLToPath(import.meta.url));
-const VENV_DIR = join(homedir(), '.pi', 'agent', '.venvs', 'confluence-docs');
-const VENV_PY = join(VENV_DIR, 'Scripts', 'python.exe');
-const CACHE = join(homedir(), '.cache', 'confluence-docs');
-mkdirSync(CACHE, { recursive: true });
-const gfm = gfmPkg.gfm || gfmPkg.default?.gfm || gfmPkg.default;
 const IS_WIN = process.platform === 'win32';
-
+const gfm = gfmPkg.gfm || gfmPkg.default?.gfm || gfmPkg.default;
 const config = JSON.parse(readFileSync(join(here, 'config.json'), 'utf8'));
-const TTL_MS = (config.ttl_hours ?? 24) * 3600 * 1000;
-const HALT_THRESHOLD = config.secrets_halt_threshold ?? 5;
 
-const die = (msg, code = 1) => { console.error(String(msg)); process.exit(code); };
+const die = (msg, code = 2) => { console.error(String(msg)); process.exit(code); };
 const sh = (cmd, args, opts = {}) => {
   const quoted = args.map((a) => (/"|[\s&|<>()^%]/.test(String(a)) ? `"${String(a).replace(/"/g, '\\"')}"` : String(a)));
   return spawnSync(cmd, quoted, { encoding: 'utf8', shell: IS_WIN, ...opts });
 };
 
-// ---------- URL helpers ----------
-
-function urlInfo(rawUrl) {
-  const u = new URL(rawUrl);
-  let origin = u.origin;
-  if (/atlassian\.net/.test(origin)) origin += '/wiki';
-  const m = u.href.match(/\/pages\/(\d+)/) || u.search.match(/pageId=(\d+)/);
-  const pageId = m ? m[1] : null;
-  const key = pageId || createHash('sha1').update(rawUrl).digest('hex').slice(0, 10);
-  return { origin, pageId, key, rest: origin };
-}
-
-async function restGet(origin, path, timeoutMs = 8000) {
-  const res = await fetch(`${origin}${path}`, { signal: AbortSignal.timeout(timeoutMs) });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
-
-// ---------- storage-format preprocessing -> plain HTML (kept from v1) ----------
+// ---------- HTML -> markdown (kept from v2: proven Confluence handling) ----------
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const cdata = (s) => s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1');
@@ -92,79 +78,323 @@ function preprocess(html) {
   });
   html = html.replace(/<ac:structured-macro[\s\S]*?<\/ac:structured-macro>/g, (m) => ` ${textOf(m)} `);
   html = html.replace(/<\/?a[cr]:[^>]*>/g, '');
-  html = cdata(html);
-  return html;
+  return cdata(html);
 }
 
 function mainContent(html) {
   try {
-    const doc = new domino.DOMParser().parseFromString(html, 'text/html');
+    const doc = domino.createDocument(html);
     const el = doc.getElementById('main-content');
     if (el && el.innerHTML.trim()) return el.innerHTML;
   } catch { /* fall through */ }
   return null;
 }
 
+function fixTables(html) {
+  // gfm-таблицы требуют: первая строка из <th>, внутри ячеек нет блочных <p>/<div>
+  // и переносов строк (иначе строка таблицы разваливается на абзацы).
+  // mammoth даёт всё <td>+<p>; Confluence — вложенные <div> в ячейках (старый
+  // вариант молча падал в domino на них и отдавал исходный HTML).
+  try {
+    const doc = domino.createDocument(`<div id="__fix">${html}</div>`);
+    const root = doc.getElementById('__fix');
+    const arr = (nl) => Array.prototype.slice.call(nl);
+    const inNestedTable = (el, c) => {
+      let n = el.parentNode;
+      while (n && n !== c) { if (n.nodeName === 'TABLE') return true; n = n.parentNode; }
+      return false;
+    };
+    const unwrapBlock = (el) => {
+      const parent = el.parentNode;
+      if (!parent) return;
+      while (el.firstChild) parent.insertBefore(el.firstChild, el);
+      parent.removeChild(el);
+    };
+    for (const t of arr(root.getElementsByTagName('table'))) {
+      for (const c of arr(t.getElementsByTagName('td')).concat(arr(t.getElementsByTagName('th')))) {
+        if (c.getElementsByTagName('table').length) continue; // вложенные таблицы не трогаем
+        let changed = true;
+        while (changed) {
+          changed = false;
+          for (const el of arr(c.getElementsByTagName('p')).concat(arr(c.getElementsByTagName('div')))) {
+            if (inNestedTable(el, c)) continue;
+            unwrapBlock(el); changed = true;
+          }
+          for (const br of arr(c.getElementsByTagName('br'))) {
+            if (inNestedTable(br, c) || !br.parentNode) continue;
+            br.parentNode.insertBefore(doc.createTextNode(' '), br);
+            br.parentNode.removeChild(br); changed = true;
+          }
+        }
+        // нормализуем пробелы: строка таблицы обязана быть однострочной
+        const walk = (n) => {
+          for (const child of arr(n.childNodes)) {
+            if (child.nodeType === 3) child.data = child.data.replace(/\s+/g, ' ');
+            else if (child.nodeName !== 'TABLE') walk(child);
+          }
+        };
+        walk(c);
+        while (c.firstChild && c.firstChild.nodeType === 3 && !c.firstChild.data.trim()) c.removeChild(c.firstChild);
+        while (c.lastChild && c.lastChild.nodeType === 3 && !c.lastChild.data.trim()) c.removeChild(c.lastChild);
+      }
+      const rows = arr(t.getElementsByTagName('tr'));
+      if (!rows.length) continue;
+      const kids = arr(rows[0].childNodes).filter((n) => n.nodeName === 'TD' || n.nodeName === 'TH');
+      if (kids.length && kids.every((n) => n.nodeName === 'TD')) {
+        for (const td of kids) {
+          const th = doc.createElement('th');
+          for (let i = 0; i < td.attributes.length; i++) th.setAttribute(td.attributes[i].name, td.attributes[i].value);
+          while (td.firstChild) th.appendChild(td.firstChild);
+          td.parentNode.replaceChild(th, td);
+        }
+      }
+    }
+    return root.innerHTML;
+  } catch { /* fall through */ }
+  return html;
+}
+
 function toMarkdown(html) {
   const td = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced', bulletListMarker: '-' });
   if (gfm) td.use(gfm);
-  return td.turndown(html);
+  return td.turndown(fixTables(html));
 }
 
-const slug = (s) => s.toLowerCase().replace(/[^\wа-яё.-]+/gi, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 50) || 'untitled';
+// ---------- MHT (Confluence "Export to Word" = MIME + quoted-printable HTML) ----------
 
-// ---------- download ----------
-
-async function download(url, u) {
-  // 1) anonymous REST, storage format (cleanest)
-  if (u.pageId) {
-    try {
-      const j = await restGet(u.origin, `/rest/api/content/${u.pageId}?expand=body.storage,title,version`);
-      return { html: j.body.storage.value, title: j.title || u.pageId, version: j.version?.number ?? null };
-    } catch { /* fall through */ }
-    try { // cheap version probe is done by caller only when cached
-      void 0;
-    } catch { /* noop */ }
+function extractMht(buf) {
+  const raw = buf.toString('latin1');
+  const sep = raw.indexOf('\r\n\r\n') >= 0 ? '\r\n\r\n' : '\n\n';
+  const hEnd = raw.indexOf(sep);
+  if (hEnd < 0) return null;
+  const headers = raw.slice(0, hEnd);
+  if (!/^\s*(?:HTTP\/[\d.]+|Date:|MIME-Version:|Subject:|Message-ID:)/mi.test(headers)) return null;
+  const body = raw.slice(hEnd + sep.length);
+  const ct = (headers.match(/content-type:\s*([^\r\n;]+)/i) || [])[1] || '';
+  const b = (headers.match(/boundary="?([^"\r\n;]+)"?/i) || [])[1];
+  const parts = [];
+  if (/multipart/i.test(ct) && b) {
+    for (const part of body.split('--' + b)) {
+      const pSep = part.indexOf('\r\n\r\n') >= 0 ? '\r\n\r\n' : '\n\n';
+      const pEnd = part.indexOf(pSep);
+      if (pEnd < 0) continue;
+      parts.push({ headers: part.slice(0, pEnd), body: part.slice(pEnd + pSep.length) });
+    }
+  } else parts.push({ headers, body });
+  for (const p of parts) {
+    if (!/content-type:\s*text\/html/i.test(p.headers)) continue;
+    let t = p.body.replace(/--\s*$/, '').replace(/\r?\n$/, '');
+    const enc = (p.headers.match(/content-transfer-encoding:\s*(\S+)/i) || [])[1] || '';
+    if (/quoted-printable/i.test(enc)) {
+      t = t.replace(/=\r?\n/g, '').replace(/=([0-9A-F]{2})/gi, (m, h) => String.fromCharCode(parseInt(h, 16)));
+      return Buffer.from(t, 'latin1').toString('utf8');
+    }
+    if (/base64/i.test(enc)) return Buffer.from(t.replace(/\s+/g, ''), 'base64').toString('utf8');
+    return Buffer.from(t, 'latin1').toString('utf8');
   }
-  // 2) rendered page
-  try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(15000), redirect: 'follow' });
-    const html = await res.text();
-    if (/id="login"|loginsitemap|ssologin/i.test(html.slice(0, 5000))) {
-      return { sso: true };
-    }
-    const mc = mainContent(html);
-    if (mc) {
-      const title = (html.match(/<title>([^<]*)<\/title>/) || [])[1]?.trim() || u.pageId || 'page';
-      return { html: mc, title, version: null };
-    }
-  } catch { /* fall through */ }
-  return { sso: true };
+  return null;
 }
 
-// ---------- sanitizers ----------
+function preprocessWordHtml(html) {
+  // mso/Word-мусор: условные комментарии, xml-острова, имена-пространства o:/v:/w:, link/meta
+  const title = (html.match(/<title[^>]*>([^<]*)<\/title>/i) || [])[1]?.trim() || null;
+  let body = (html.match(/<body[^>]*>([\s\S]*?)<\/body>/i) || [, html])[1];
+  body = body
+    .replace(/<!--\[if[\s\S]*?<!\[endif\]-->/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<xml[\s\S]*?<\/xml>/gi, '')
+    .replace(/<\/?(?:o|v|w|m|st1|st2):[^>]*>/gi, '')
+    .replace(/<(?:link|meta)[^>]*>/gi, '');
+  return { title, body };
+}
+
+async function toMd(input, out) {
+  const abs = resolve(input);
+  if (!existsSync(abs)) die(`no such file: ${abs}`);
+  const buf = readFileSync(abs);
+  const sniff = buf.subarray(0, 512).toString('latin1');
+  let html, title = null;
+  if (/^\s*(?:HTTP\/[\d.]+|Date:|MIME-Version:|Subject:|Message-ID:)/mi.test(sniff)) {
+    const mht = extractMht(buf);
+    if (!mht) die('MIME-saved file detected, but no text/html part found');
+    ({ body: html, title } = preprocessWordHtml(mht));
+  } else if (buf[0] === 0x50 && buf[1] === 0x4b) {
+    const r = await mammoth.convertToHtml({ buffer: buf });
+    html = r.value.replace(/<img[^>]*>/g, '[image]');
+  } else if (/^\s*</.test(sniff)) { // HTML: первый значимый символ — тег (doctype/html/head/h2/…)
+    const raw = buf.toString('utf8');
+    html = mainContent(raw) || raw;
+    title = (raw.match(/<title[^>]*>([^<]*)<\/title>/i) || [])[1]?.trim() || null;
+    html = preprocess(html);
+  } else {
+    die(`unsupported input (extension ${extname(abs)}): expected .docx, .html or a Confluence Word export (.doc = MHT)`);
+  }
+  let mdBody = toMarkdown(html).trim();
+  mdBody = mdBody.replace(/^#+\s*$/gm, '').replace(/\n{3,}/g, '\n\n');
+  const md = (title ? `# ${title}\n\n` : '') + mdBody + '\n';
+  const outPath = out ? resolve(out) : join(dirname(abs), basename(abs, extname(abs)) + '.md');
+  writeFileSync(outPath, md, 'utf8');
+  // Gate is part of conversion: exit code = mdcheck's, so `to-md x && cat x.md`
+  // can never reach a dirty output. The md itself is still written — the user
+  // cleans it by hand (fail-visible).
+  const gate = runMdCheck(outPath);
+  console.log(JSON.stringify({ mdPath: outPath, lines: md.split('\n').length, mdcheck: gate.report }, null, 1));
+  if (gate.code !== 0) {
+    console.error(`⚠ to-md output is NOT clean (mdcheck exit ${gate.code}) — agent must not read it; hand the masked suspects to the user (SKILL step 3)`);
+  }
+  process.exit(gate.code);
+}
+
+// ---------- mdcheck: gitleaks (fail-closed) + suspects (fail-visible) ----------
+
+const mask = (v) => {
+  if (!v) return '***';
+  if (v.length <= 4) return '***';
+  const at = v.indexOf('@');
+  if (at > 0 && v.indexOf('.', at) > at) return v.slice(0, 1) + '***@' + v.slice(at + 1);
+  return v.slice(0, 2) + '***' + v.slice(-1);
+};
+
+const whitelisted = (v) => (config.whitelist || []).some((w) => new RegExp(w, 'i').test(v));
 
 function runGitleaks(mdText) {
-  const tmp = join(CACHE, `.tmp-gl-${Date.now()}.json`);
+  const tmp = join(tmpdir(), `.gl-${Date.now()}.json`);
   try {
     const r = sh('gitleaks', ['stdin', '--report-format', 'json', '--report-path', tmp], { input: mdText });
-    // exit codes: 0 = clean, 1 = findings, others = tool error
-    if (r.status !== 0 && r.status !== 1) die(`gitleaks failed (code ${r.status}): ${r.stderr}`);
+    if (r.status !== 0 && r.status !== 1) die(`gitleaks failed (code ${r.status}): ${r.stderr}`, 2);
     if (!existsSync(tmp)) return [];
-    const findings = JSON.parse(readFileSync(tmp, 'utf8'));
-    const wl = (config.whitelist || []).map((w) => new RegExp(w, 'i'));
-    const kept = findings.filter((f) => !wl.some((re) => re.test(f.Secret || '')));
-    return kept.map((f) => ({ rule: f.RuleID, secret: f.Secret || '' }));
+    return JSON.parse(readFileSync(tmp, 'utf8'))
+      .map((f) => ({ type: `gitleaks:${f.RuleID}`, value: f.Secret || '' }))
+      .filter((f) => f.value && !whitelisted(f.value));
   } finally {
     if (existsSync(tmp)) rmSync(tmp, { force: true });
   }
 }
 
-function runPresidio(mdText, outPath, reportPath) {
-  const r = sh(VENV_PY, [join(here, 'presidio_redact.py'), '--out', outPath, '--report', reportPath],
-    { input: mdText, timeout: 180000 });
-  if (r.status !== 0) die(`presidio_redact failed (code ${r.status}): ${r.stderr || r.stdout}`);
-  return JSON.parse(r.stdout);
+const SLAV = ['ov', 'ev', 'yn', 'sky', 'ski', 'enko', 'ina', 'ova', 'eva', 'yuk', 'uk', 'ko', 'tsev', 'chev', 'vich', 'ich', 'aya', 'in'];
+const STOPLIST = new Set(['login', 'admin', 'main', 'domain', 'token', 'plugin', 'margin', 'cabin', 'ukraine']);
+const hasSlavSuffix = (w) => w.length >= 5 && SLAV.some((s) => w.toLowerCase().endsWith(s)) && !STOPLIST.has(w.toLowerCase());
+
+const SECRET_PATTERNS = [
+  ['JWT', /\bey[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{5,}\b/g],
+  ['URL_CREDS', /\b[a-z][a-z0-9+.-]*:\/\/[^\s/@:]+:[^\s/@]+@/gi],
+  ['API_KEY', /\b(?:sk-[A-Za-z0-9]{16,}|AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35}|xox[baprs]-[A-Za-z0-9-]{10,}|gh[pousr]_[A-Za-z0-9]{16,}|glpat-[A-Za-z0-9_-]{10,})\b/g],
+  ['CRED_KEYWORD', /(?<![а-яА-ЯёЁ\w])(?:парол|секрет|токен|password|passwd|pwd|secret|token|api[_-]?key)[^.\n]{0,40}?[:=]\s*[^\s"'«»]{4,}/gi],
+  ['CRED_ENV', /(?<![\w])[A-Za-z_]*(?:PASSWORD|PASSWD|SECRET|TOKEN|API_KEY)[A-Za-z_]*\s*[:=]/g],
+];
+
+function buildSuspectPatterns() {
+  const domains = (config.internal_domains || []).filter(Boolean).map((d) => d.toLowerCase());
+  const pats = [
+    ['EN_NAME', { re: /(?<![A-Za-z-])[A-Z][a-z]+ [A-Z][a-z]+(?![a-z])/g, strong: (m) => { const [a, b] = m.split(' '); return hasSlavSuffix(a) || hasSlavSuffix(b); } }],
+    ['EN_SURNAME', { re: /(?<![A-Za-z-])[A-Z][a-z]{2,}(?:ov|ev|yn|sky|ski|enko|ina|ova|eva|yuk|tsev|chev|vich|uk|ko)\b/g, strong: () => true }],
+    ['RU_FIO', { re: /(?<![А-Яа-яЁё\w])[А-ЯЁ][а-яё]+ [А-ЯЁ][а-яё]+(?: [А-ЯЁ][а-яё]+)?(?![а-яё\w])/g, strong: (m) => m.trim().split(' ').length >= 3 }],
+    ['EMAIL', { re: /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, strong: () => true }],
+    ['PHONE', { re: /(?:\+7|8)[\s(-]*\d{3}[\s)-]*\d{3}[\s-]*\d{2}[\s-]*\d{2}/g, strong: () => true }],
+    ['LOGIN_LINE', { re: /(?<![а-яА-ЯёЁ\w])(?:логин|login|username|user ?name)(?![а-яА-ЯёЁ\w])[^.\n]{0,40}[:=]/gi, strong: () => false }],
+    ['SNILS', { re: /\b\d{3}-\d{3}-\d{3}\s?\d{2}\b/g, strong: () => true }],
+    ['INN', { re: /(?<![а-яА-ЯёЁ\w])(?:ИНН|INN)\D{0,4}(\d{10}|\d{12})(?!\d)/gi, strong: () => true }],
+    ['PASSPORT', { re: /(?:паспорт|серия)\D{0,8}\b(\d{4}\s?\d{6})(?!\d)/gi, strong: () => true }],
+    ['PRIV_IP', { re: /\b(?:10|192)\.\d{1,3}\.\d{1,3}\.\d{1,3}\b|\b172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}\b/g, strong: () => false }],
+  ];
+  if (domains.length) {
+    const hostRx = '\\b(?:[a-z0-9][a-z0-9-]*\\.)+(?:' + domains.map((d) => d.replace(/\./g, '\\.')).join('|') + ')\\b';
+    pats.push(['HOSTNAME', { re: new RegExp(hostRx, 'gi'), strong: () => false }]);
+  }
+  return pats;
+}
+
+function runMdCheck(abs) {
+  const md = readFileSync(abs, 'utf8');
+  const lines = md.split('\n');
+
+  const secrets = [];
+  const seen = new Set();
+  for (const [type, re] of SECRET_PATTERNS) {
+    for (const line of lines) {
+      re.lastIndex = 0;
+      let m;
+      while ((m = re.exec(line)) !== null) {
+        if (m[0] === '') { re.lastIndex++; break; } // safety: zero-length match
+        const v = m[0];
+        if (!whitelisted(v) && !seen.has(v)) { seen.add(v); secrets.push({ type, value: v }); }
+      }
+    }
+  }
+  for (const f of runGitleaks(md)) if (!seen.has(f.value)) { seen.add(f.value); secrets.push(f); }
+
+  const byMatch = new Map(); // key -> {type, masked, strong, firstLine, lines[]}
+  for (const [type, { re, strong }] of buildSuspectPatterns()) {
+    lines.forEach((line, i) => {
+      re.lastIndex = 0;
+      let m;
+      while ((m = re.exec(line)) !== null) {
+        if (m[0] === '') { re.lastIndex++; break; } // safety: zero-length match
+        const v = m[0].trim();
+        const key = type + '|' + v.toLowerCase();
+        if (whitelisted(v)) continue;
+        let e = byMatch.get(key);
+        if (!e) { e = { type, masked: mask(v), strong: !!strong(v), firstLine: i + 1, lines: [] }; byMatch.set(key, e); }
+        if (e.lines.length < 5) e.lines.push(i + 1);
+      }
+    });
+  }
+  const strongS = [...byMatch.values()].filter((e) => e.strong).sort((a, b) => a.firstLine - b.firstLine);
+  const weakS = [...byMatch.values()].filter((e) => !e.strong).sort((a, b) => a.firstLine - b.firstLine);
+
+  const code = secrets.length ? 1 : (strongS.length + weakS.length ? 3 : 0);
+  return {
+    code,
+    report: {
+      file: abs,
+      clean: code === 0,
+      exit: code,
+      secrets: secrets.map((s) => ({ type: s.type, masked: mask(s.value) })),
+      suspects: {
+        strong: strongS.slice(0, config.max_suspects ?? 40),
+        weak: weakS.slice(0, config.max_suspects ?? 40),
+        more: Math.max(0, strongS.length + weakS.length - 2 * (config.max_suspects ?? 40)),
+      },
+    },
+  };
+}
+
+function mdCheck(file) {
+  const abs = resolve(file);
+  if (!existsSync(abs)) die(`no such file: ${abs}`, 2);
+  const { report, code } = runMdCheck(abs);
+  console.log(JSON.stringify(report, null, 1));
+  process.exit(code);
+}
+
+// ---------- stats: structure counters only, never content ----------
+// The one sanctioned way to inspect a to-md output that has not passed the
+// mdcheck gate (converter debugging): prints counters, never text.
+
+function stats(file) {
+  const abs = resolve(file);
+  if (!existsSync(abs)) die(`no such file: ${abs}`, 2);
+  const md = readFileSync(abs, 'utf8');
+  const lines = md.split('\n');
+  const blocks = md.split(/\n\s*\n/).map((b) => b.trim()).filter((b) => b.length > 80);
+  const seen = new Map();
+  for (const b of blocks) seen.set(b, (seen.get(b) || 0) + 1);
+  let duplicateBlocks = 0, duplicateChars = 0;
+  for (const [b, n] of seen) if (n > 1) { duplicateBlocks += n - 1; duplicateChars += (n - 1) * b.length; }
+  console.log(JSON.stringify({
+    file: abs,
+    lines: lines.length,
+    headings: lines.filter((l) => /^#{1,6}\s+\S/.test(l)).length,
+    tables: lines.filter((l) => /^\|[-: |]+$/.test(l.trim())).length,
+    tableRows: lines.filter((l) => l.trim().startsWith('|')).length,
+    codeBlocks: Math.floor((md.match(/^```/gm) || []).length / 2),
+    images: (md.match(/\[image/g) || []).length,
+    cssLines: lines.filter((l) => /^(?!\{)[.#@\w-][\w\s.,#>-]*\{[^}]*[:;]/.test(l.trim())).length,
+    duplicateBlocks,
+    duplicateChars,
+  }, null, 1));
 }
 
 // ---------- commands ----------
@@ -173,150 +403,19 @@ function check() {
   const comp = {};
   const gl = sh('gitleaks', ['version']);
   comp.gitleaks = gl.status === 0 ? gl.stdout.trim() : 'MISSING';
-  comp.venv_python = existsSync(VENV_PY);
-  if (comp.venv_python) {
-    const imp = sh(VENV_PY, ['-c', 'import presidio_analyzer, presidio_anonymizer']);
-    comp.presidio = imp.status === 0;
-    const sp = join(VENV_DIR, 'Lib', 'site-packages');
-    comp.spacy_ru = readdirSync(sp).some((d) => d.startsWith('ru_core_news_lg'));
-    comp.spacy_en = readdirSync(sp).some((d) => d.startsWith('en_core_web_lg'));
-  } else {
-    comp.presidio = false; comp.spacy_ru = false; comp.spacy_en = false;
-  }
-  comp.config = !!config;
-  const ok = comp.gitleaks !== 'MISSING' && comp.venv_python && comp.presidio && comp.spacy_ru && comp.spacy_en;
-  console.log(JSON.stringify({
-    ok, components: comp, cacheDir: CACHE,
-    cachedPages: readdirSync(CACHE).filter((f) => f.endsWith('.md')).length,
-    ttl_hours: config.ttl_hours ?? 24, secrets_halt_threshold: HALT_THRESHOLD,
-  }));
-  if (!ok) process.exit(1);
-}
-
-async function versionProbe(u) {
-  if (!u.pageId) return null;
-  try {
-    const j = await restGet(u.origin, `/rest/api/content/${u.pageId}?expand=version`, 4000);
-    return j.version?.number ?? null;
-  } catch { return undefined; } // undefined = probe unavailable
-}
-
-async function fetchPage(rawUrl, { fresh, htmlFile }) {
-  const u = urlInfo(rawUrl);
-  const metaPath = join(CACHE, `${u.key}.meta.json`);
-  const serve = (meta, cached = true) => console.log(JSON.stringify({
-    key: u.key, title: meta.title, cached, mdPath: meta.mdPath,
-    reportPath: meta.reportPath, fetchedAt: meta.fetchedAt,
-    unique_secrets: meta.unique_secrets, counts: meta.counts, halted: meta.halted === true,
-  }));
-
-  if (existsSync(metaPath) && !fresh && !htmlFile) {
-    const meta = JSON.parse(readFileSync(metaPath, 'utf8'));
-    const ver = await versionProbe(u);
-    const age = Date.now() - new Date(meta.fetchedAt).getTime();
-    if (ver === meta.version || (ver !== undefined && age < TTL_MS) || (ver === undefined && age < TTL_MS)) {
-      return serve(meta);
-    }
-  }
-
-  let html, title, version = null;
-  if (htmlFile) {
-    html = readFileSync(htmlFile, 'utf8');
-    const mc = mainContent(html);
-    html = mc || html;
-    title = (html.match(/<title>([^<]*)<\/title>/) || [])[1]?.trim() || `saved:${u.pageId || 'page'}`;
-  } else {
-    const d = await download(rawUrl, u);
-    if (d.sso) {
-      die('SSO/login page detected or page unreachable. Fallback: open the URL in Chrome via the '
-        + 'chrome-devtools MCP skill, save the rendered HTML (document.documentElement.outerHTML) '
-        + 'to a file, then re-run: confluence.mjs fetch <url> --html <file>', 2);
-    }
-    ({ html, title, version } = d);
-  }
-
-  const mdBody = toMarkdown(preprocess(html));
-  const md = `# ${title}\n\n${mdBody}\n`;
-
-  const glFindings = runGitleaks(md);
-  const uniqSecrets = new Set(glFindings.map((f) => f.secret));
-
-  const base = join(CACHE, `${u.key}-${slug(title)}`);
-  const presReportTmp = join(CACHE, `.tmp-pres-${Date.now()}.json`);
-  let pres;
-  try {
-    pres = runPresidio(md, `${base}.md`, presReportTmp);
-    const presReport = JSON.parse(readFileSync(presReportTmp, 'utf8'));
-    var presFindings = presReport.findings || [];
-    var pseudonymsAdded = presReport.pseudonyms_added || [];
-  } finally {
-    if (existsSync(presReportTmp)) rmSync(presReportTmp, { force: true });
-  }
-
-  const counts = { ...pres.counts };
-  for (const f of glFindings) counts[`gitleaks:${f.rule}`] = (counts[`gitleaks:${f.rule}`] || 0) + 1;
-  const total = pres.total + glFindings.length;
-  const uniqueSecrets = uniqSecrets.size + (pres.unique_secret_count || 0);
-  const halted = uniqueSecrets > HALT_THRESHOLD;
-
-  const report = [
-    `# Sanitizer report — ${title} (key ${u.key})`,
-    `source: ${rawUrl}`,
-    `fetched: ${new Date().toISOString()}${version !== null ? `, page version ${version}` : ''}`,
-    `total redactions: ${total} (unique secrets: ${uniqueSecrets}${halted ? ' — ABOVE THRESHOLD, halted' : ''})`,
-    ...Object.entries(counts).map(([k, v]) => `  ${k}: ${v}`),
-    '',
-    '## presidio findings (masked samples only)',
-    ...presFindings.map((f) => `- [${f.type}] ${f.masked}`),
-    '',
-    '## gitleaks findings (rule + masked secret)',
-    ...glFindings.map((f) => `- [${f.rule}] ${f.secret.length > 6 ? f.secret.slice(0, 2) + '***' + f.secret.slice(-1) : '***'}`),
-    '',
-    '## pseudonyms added',
-    ...pseudonymsAdded.map((p) => `- ${p.pseudo} (${p.type})`),
-    '',
-    'Raw values are not stored anywhere except the local pseudonym mappings file.',
-  ].join('\n');
-  writeFileSync(`${base}.report.txt`, report, 'utf8');
-
-  const meta = {
-    key: u.key, url: rawUrl, title, fetchedAt: new Date().toISOString(), version,
-    mdPath: `${base}.md`, reportPath: `${base}.report.txt`,
-    counts, total, unique_secrets: uniqueSecrets, halted,
-  };
-  writeFileSync(metaPath, JSON.stringify(meta, null, 1), 'utf8');
-
-  console.log(JSON.stringify({
-    key: u.key, title, cached: false, mdPath: meta.mdPath, reportPath: meta.reportPath,
-    fetchedAt: meta.fetchedAt, unique_secrets: uniqueSecrets, counts, halted,
-  }));
-}
-
-function lookup(term) {
-  const p = join(CACHE, 'mappings.json');
-  if (!existsSync(p)) return console.log(JSON.stringify({ matches: [] }));
-  const mapping = JSON.parse(readFileSync(p, 'utf8'));
-  const t = term.toLowerCase();
-  const matches = mapping.filter((e) => e.real.toLowerCase() === t || e.pseudo.toLowerCase() === t)
-    .map((e) => ({ real: e.real, pseudo: e.pseudo, type: e.type }));
-  console.log(JSON.stringify({ matches, note: 'value has entered the agent context on explicit request' }));
-}
-
-function openMappings() {
-  const p = join(CACHE, 'mappings.json');
-  if (!existsSync(p)) return console.log(JSON.stringify({ opened: false, reason: 'no mappings yet' }));
-  sh('cmd', ['/c', 'start', '', p]);
-  console.log(JSON.stringify({ opened: true, path: p, note: 'opened in external viewer; contents never entered agent context' }));
+  comp.mammoth = true; comp.turndown = true; comp.config = !!config;
+  console.log(JSON.stringify({ ok: comp.gitleaks !== 'MISSING', components: comp }));
+  process.exit(comp.gitleaks !== 'MISSING' ? 0 : 1);
 }
 
 const [, , cmd, ...rest] = process.argv;
-const flags = new Set(rest.filter((a) => a.startsWith('--')));
+const flags = rest.filter((a) => a.startsWith('--'));
 const args = rest.filter((a) => !a.startsWith('--'));
-const htmlIdx = rest.indexOf('--html');
-const htmlFile = htmlIdx >= 0 ? rest[htmlIdx + 1] : null;
+const outIdx = rest.indexOf('--out');
+const outFile = outIdx >= 0 ? rest[outIdx + 1] : null;
 
 if (cmd === 'check') check();
-else if (cmd === 'fetch' && args[0]) fetchPage(args[0], { fresh: flags.has('--fresh'), htmlFile }).catch((e) => die(e.message));
-else if (cmd === 'lookup' && args[0]) lookup(args[0]);
-else if (cmd === 'open-mappings') openMappings();
-else die('usage: confluence.mjs <check | fetch <url> [--fresh] [--html file] | lookup <term> | open-mappings>');
+else if (cmd === 'to-md' && args[0]) toMd(args[0], outFile).catch((e) => die(e.message));
+else if (cmd === 'mdcheck' && args[0]) mdCheck(args[0]);
+else if (cmd === 'stats' && args[0]) stats(args[0]);
+else die('usage: confluence.mjs <check | to-md <in.doc|in.docx|in.html> [--out file.md] | mdcheck <file.md> | stats <file.md>>');

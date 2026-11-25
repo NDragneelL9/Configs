@@ -9,6 +9,10 @@ metadata:
     url: "https://github.com/humanlayer/skills/blob/main/plugins/show-me/skills/show-me/SKILL.md"
 ---
 
+## Before writing
+
+Determine the PR **base branch** first — the diff and the commit list come from `git log <base>..HEAD`. The repo's git conventions doc names it when there is a convention; with stacked branches the base of a PR is its parent branch, not the main branch. When unsure which branch the PR targets, ask the user before writing anything.
+
 Use this template for writing the PR body:
 
 ```markdown
@@ -25,6 +29,10 @@ Use this template for writing the PR body:
 **Blast Radius:** <one-word description>
 
 <optional: potential ramifications of merge>
+
+## How to test
+
+<2-5 numbered steps a reviewer can follow to verify the change by hand>
 ```
 
 ## Sections
@@ -155,3 +163,7 @@ You may use one of these, you may use several, it is unlikely you will use all o
 Describe whether it's a one-way or two-way door. You can walk back through two-way doors, but not one-way doors. A PR that is cheap to roll back is lower risk. Changes that involve destructive actions or hard-to-reverse decisions are one-way doors.
 
 The blast radius is the potential impact or scope of the changes introduced by this PR. Consider all possibilities. Examples are layout shift, breakages for consumers, mobile responsiveness, etc.
+
+### How to test
+
+The last section. A short checklist the reviewer runs through by hand: each step is where to go, what to do, and what to expect. Derive the steps from the changed behaviour, not from the diff file list; cover the main happy path and add a step for an edge case only when the PR targets it. Skip the section when there is nothing to check by hand, such as a refactor with no behaviour change.

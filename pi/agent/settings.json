@@ -3,7 +3,7 @@
   "theme": "ayu-dark",
   "quietStartup": "header",
   "defaultProvider": "zai",
-  "defaultModel": "glm-5.4",
+  "defaultModel": "glm-5.3",
   "packages": [
     {
       "source": "npm:pi-subagents",
@@ -37,10 +37,10 @@
     "defaultInheritGlobalContext": true,
     "agentOverrides": {
       "reviewer": {
-        "model": "zai/glm-5.4"
+        "model": "zai/glm-5.3"
       },
       "oracle": {
-        "model": "zai/glm-5.4"
+        "model": "zai/glm-5.3"
       },
       "claude-code": {
         "disabled": true

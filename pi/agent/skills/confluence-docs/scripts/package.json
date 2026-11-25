@@ -2,9 +2,10 @@
   "name": "confluence-docs-scripts",
   "private": true,
   "type": "module",
-  "description": "Fetch Confluence pages, convert to Markdown, deterministically sanitize secrets/PII",
+  "description": "Convert Confluence exports (docx/html) to Markdown; gate agent reads with gitleaks + PII suspects scan",
   "dependencies": {
     "domino": "^2.1.9",
+    "mammoth": "^1.13.0",
     "turndown": "^7.2.0",
     "turndown-plugin-gfm": "^1.0.2"
   }

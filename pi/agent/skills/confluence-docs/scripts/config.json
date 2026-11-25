@@ -1,9 +1,10 @@
 {
-  "ttl_hours": 24,
-  "secrets_halt_threshold": 5,
-  "anonymize_technical": true,
-  "internal_domains": ["corp.local", "corp"],
-  "system_names": [],
-  "ner_models": { "ru": "ru_core_news_lg", "en": "en_core_web_lg" },
-  "whitelist": ["Тел\\b", "Схем\\w+ окружени\\w+", "Схем\\w+"]
+  "whitelist": [
+    "AKIAIOSFODNN7EXAMPLE"
+  ],
+  "internal_domains": [
+    "corp.local",
+    "corp"
+  ],
+  "max_suspects": 40
 }

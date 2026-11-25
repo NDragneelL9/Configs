@@ -30,7 +30,11 @@ make_snapshot() {
     if [ -f "$AGENT_SRC/$f" ]; then cp "$AGENT_SRC/$f" "$agent_dst/$f"; fi
   done
 
-  local excludes=(--exclude='.venv' --exclude='node_modules' --exclude='__pycache__' --exclude='.pytest_cache')
+  # excludes: окружения/кэши + живые креды скиллов (secrets.env, .token.json —
+  # напр. warcraftlogs) и их рабочий скрап (work/) — в снапшот не берём
+  local excludes=(--exclude='.venv' --exclude='node_modules' --exclude='__pycache__' \
+                  --exclude='.pytest_cache' --exclude='secrets.env' \
+                  --exclude='.token.json' --exclude='work')
   for d in extensions themes skills; do
     if [ -d "$AGENT_SRC/$d" ]; then
       mkdir -p "$agent_dst/$d"
@@ -102,6 +106,12 @@ case "${1:-}" in
     make_snapshot "$SCRIPT_DIR"
 
     echo "==> Страховочная проверка на секреты в снапшоте"
+    leaked="$(find "$SCRIPT_DIR/agent" "$SCRIPT_DIR/dotagents" \
+              \( -name 'secrets.env' -o -name '.token.json' \) -print 2>/dev/null)"
+    if [ -n "$leaked" ]; then
+      echo "ВНИМАНИЕ: в снапшоте файлы с живыми кредами — исключи их из tar: $leaked" >&2
+      exit 1
+    fi
     if grep -rInE '(sk-[A-Za-z0-9_-]{8,}|Bearer[[:space:]]+[0-9a-f]{16,})' \
          "$SCRIPT_DIR/agent" "$SCRIPT_DIR/dotagents" | grep -v '<<OBSIDIAN_TOKEN>>'; then
       echo "ВНИМАНИЕ: похоже на секреты в снапшоте — проверь вручную перед коммитом!" >&2
