@@ -30,11 +30,14 @@ make_snapshot() {
     if [ -f "$AGENT_SRC/$f" ]; then cp "$AGENT_SRC/$f" "$agent_dst/$f"; fi
   done
 
-  # excludes: окружения/кэши + живые креды скиллов (secrets.env, .token.json —
-  # напр. warcraftlogs) и их рабочий скрап (work/) — в снапшот не берём
+  # excludes: окружения/кэши, живые креды скиллов (secrets.env, .env,
+  # token-файлы, *.pem/*.key — напр. warcraftlogs) и рабочий скрап (work/);
+  # шаблоны *.example.env остаются
   local excludes=(--exclude='.venv' --exclude='node_modules' --exclude='__pycache__' \
-                  --exclude='.pytest_cache' --exclude='secrets.env' \
-                  --exclude='.token.json' --exclude='work')
+                  --exclude='.pytest_cache' --exclude='secrets.env' --exclude='.env' \
+                  --exclude='secrets*.json' --exclude='.token.json' --exclude='token.json' \
+                  --exclude='.token' --exclude='*.pem' --exclude='*.key' \
+                  --exclude='*.p12' --exclude='*.pfx' --exclude='work')
   for d in extensions themes skills; do
     if [ -d "$AGENT_SRC/$d" ]; then
       mkdir -p "$agent_dst/$d"
@@ -51,7 +54,11 @@ make_snapshot() {
   fi
 
   if [ -d "$AGENTS_SRC" ]; then
-    cp -r "$AGENTS_SRC/skills" "$agents_dst/skills"
+    # те же excludes, что для agent: dotagents-скиллы тоже без живых кредов и скрапа
+    if [ -d "$AGENTS_SRC/skills" ]; then
+      mkdir -p "$agents_dst/skills"
+      tar -C "$AGENTS_SRC/skills" "${excludes[@]}" -cf - . | tar -C "$agents_dst/skills" -xf -
+    fi
     if [ -f "$AGENTS_SRC/.skill-lock.json" ]; then
       cp "$AGENTS_SRC/.skill-lock.json" "$agents_dst/.skill-lock.json"
     fi
@@ -107,7 +114,10 @@ case "${1:-}" in
 
     echo "==> Страховочная проверка на секреты в снапшоте"
     leaked="$(find "$SCRIPT_DIR/agent" "$SCRIPT_DIR/dotagents" \
-              \( -name 'secrets.env' -o -name '.token.json' \) -print 2>/dev/null)"
+              \( -type f \( -name 'secrets.env' -o -name 'secrets*.json' -o -name '.env' \
+                            -o -name '.token.json' -o -name 'token.json' -o -name '.token' \
+                            -o -name '*.pem' -o -name '*.key' -o -name '*.p12' -o -name '*.pfx' \) \
+                 -o -type d -name 'work' \) -print 2>/dev/null)"
     if [ -n "$leaked" ]; then
       echo "ВНИМАНИЕ: в снапшоте файлы с живыми кредами — исключи их из tar: $leaked" >&2
       exit 1

@@ -1,0 +1,5 @@
+# Синтетические секреты, подсаженные в тест-фикстуры confluence-docs
+# (SKILL.md: «фикстуры — синтетика с подсаженными данными») — не реальные креды:
+# канонический тест-JWT (sub=1234567890) и выдуманный api.internal.
+pi/agent/skills/confluence-docs/examples/sample2.html:jwt:2
+pi/agent/skills/confluence-docs/examples/sample2.html:curl-auth-header:2

@@ -13,7 +13,7 @@
 | `agent/mcp.json` | MCP-серверы (obsidian, chrome-devtools) — **токен вычищен** |
 | `agent/extensions/` | TS-расширения (clean-header, status-line, tab-title, zai-usage) |
 | `agent/themes/` | тема ayu-dark |
-| `agent/skills/` | личные скиллы (obsidian-notes, keepass-update, chrome-devtools-mcp) |
+| `agent/skills/` | личные скиллы (obsidian-notes, keepass-update, chrome-devtools-mcp, confluence-docs, warcraftlogs, delete-comments) |
 | `agent/npm/package*.json` | пины npm-пакетов (pi-subagents, context7-pi, pi-web-access) |
 | `dotagents/skills/` + `.skill-lock.json` | скиллы skills CLI (mattpocock/skills и др.) с пинами версий |
 
@@ -21,6 +21,9 @@
 
 - `~/.pi/agent/auth.json` — **API-ключи провайдеров** (zai, opencode-go)
 - токен Obsidian в `mcp.json` — заменяется на `<<OBSIDIAN_TOKEN>>`
+- живые креды и скрап скиллов: `secrets.env`, `.env`, `.token.json`, `token.json`,
+  `*.pem`/`*.key`, каталоги `work/` (напр. warcraftlogs: WCL-клиент + OAuth-токен) —
+  tar-исключения в `backup.sh`, страховка в `.gitignore`
 - `obsidian-local-rest-api.crt` — сертификат генерится плагином на каждой машине
 - `sessions/`, `crashes.json`, `models-store.json`, `install/`, `bin/`, `trust.json`,
   состояние расширений — кэши/логи, восстанавливаются сами

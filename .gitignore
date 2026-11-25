@@ -3,7 +3,17 @@ node_modules/
 __pycache__/
 .pytest_cache/
 
-# живые креды скиллов и их рабочий скрап — никогда в репо
-secrets.env
+# живые креды и рабочий скрап — никогда в репо (шаблоны *.example.env остаются)
+.env
+*.env
+!*.example.env
+secrets*.json
 .token.json
+token.json
+.token
+*.pem
+*.key
+*.p12
+*.pfx
 pi/agent/skills/*/work/
+pi/dotagents/skills/*/work/
