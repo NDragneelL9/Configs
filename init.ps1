@@ -40,8 +40,6 @@ Ensure-ScoopPkg z
 Ensure-ScoopPkg Hack-NF
 Ensure-ScoopPkg terminal-icons
 Ensure-ScoopPkg gitleaks
-Ensure-ScoopPkg python
-Ensure-ScoopPkg uv
 
 # --- 3. oh-my-posh (scoop-манифест из релиза) ---
 if (-not (Test-Cmd oh-my-posh)) {
@@ -96,6 +94,6 @@ if ($LASTEXITCODE -ne 0) { throw "pi/restore.sh завершился с кодо
 "1. auth.json — ключи провайдеров (zai и т.д.): запусти pi и войди в каждый провайдер."
 "2. Obsidian: сертификат Local REST API -> ~/.pi/agent/obsidian-local-rest-api.crt,"
 "   затем в pi: /mcp -> obsidian -> Enable (после этого сервер остаётся включённым)."
-"3. confluence-docs: venv (~/.pi/agent/.venvs/confluence-docs) построится при первом"
-"   использовании скилла — шаг check в SKILL.md подскажет план установки."
+"3. confluence-docs: зависимости скилла (node) — `npm ci` в `~/.pi/agent/skills/confluence-docs/scripts/`;"
+"   шаг check в SKILL.md подскажет план установки."
 "4. bashrc_profile — для Linux-машин, на Windows не используется."
