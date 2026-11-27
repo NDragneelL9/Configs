@@ -8,9 +8,11 @@
 | В репо (`agent/`, `dotagents/`) | Что это |
 |---|---|
 | `agent/AGENTS.md` | глобальные инструкции агенту |
-| `agent/settings.json` | тема, дефолтная модель, список пакетов, включённые модели |
+| `agent/WATCHDOG.md` | стоящие инструкции watchdog (security/scope) |
+| `agent/settings.json` | тема, дефолтная модель, список пакетов, включённые модели, субагенты/watchdog |
 | `agent/models.json` | кастомные провайдеры (LM Studio) |
 | `agent/mcp.json` | MCP-серверы (obsidian, chrome-devtools) — **токен вычищен** |
+| `agent/web-search.json` | маршрутизация web_search/fetch_content (pi-web-access): fallback-провайдеры |
 | `agent/extensions/` | TS-расширения (clean-header, status-line, tab-title, zai-usage) |
 | `agent/themes/` | тема ayu-dark |
 | `agent/skills/` | личные скиллы (obsidian-notes, keepass-update, chrome-devtools-mcp, confluence-docs, warcraftlogs, delete-comments) |

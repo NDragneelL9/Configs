@@ -28,7 +28,7 @@ if [ -z "$TOKEN" ] && [ -n "${OBSIDIAN_TOKEN:-}" ]; then
 fi
 
 echo "==> Копируем файлы в ~/.pi/agent"
-for f in AGENTS.md settings.json models.json mcp.json; do
+for f in AGENTS.md WATCHDOG.md settings.json models.json mcp.json web-search.json; do
   if [ -f "$SRC_AGENT/$f" ]; then cp "$SRC_AGENT/$f" "$AGENT_DST/$f"; fi
 done
 for d in extensions themes skills; do

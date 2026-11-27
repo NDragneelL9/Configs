@@ -26,7 +26,7 @@ make_snapshot() {
   rm -rf "$agent_dst" "$agents_dst"
   mkdir -p "$agent_dst" "$agents_dst"
 
-  for f in AGENTS.md settings.json models.json mcp.json; do
+  for f in AGENTS.md WATCHDOG.md settings.json models.json mcp.json web-search.json; do
     if [ -f "$AGENT_SRC/$f" ]; then cp "$AGENT_SRC/$f" "$agent_dst/$f"; fi
   done
 
