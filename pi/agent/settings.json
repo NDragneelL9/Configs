@@ -1,9 +1,9 @@
 {
-  "lastChangelogVersion": "1.6.0",
+  "lastChangelogVersion": "1.6.1",
   "theme": "ayu-dark",
   "quietStartup": "header",
   "defaultProvider": "zai",
-  "defaultModel": "glm-5.3",
+  "defaultModel": "glm-5.4",
   "packages": [
     {
       "source": "npm:pi-subagents",
@@ -59,6 +59,34 @@
       },
       "cursor-agent-writer": {
         "disabled": true
+      }
+    },
+    "watchdog": {
+      "enabled": true,
+      "main": {
+        "model": "zai/glm-5.3",
+        "thinking": "high"
+      },
+      "scope": {
+        "enabled": true
+      },
+      "cadence": {
+        "everyNTools": 25
+      },
+      "children": {
+        "enabled": true,
+        "model": "zai/glm-5.3-flash",
+        "cadence": {
+          "everyNTools": 20
+        },
+        "overrides": {
+          "reviewer": {
+            "enabled": false
+          },
+          "oracle": {
+            "enabled": false
+          }
+        }
       }
     }
   }

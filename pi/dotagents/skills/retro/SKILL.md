@@ -12,6 +12,8 @@ The user has asked for a **retrospective**. You are suggesting improvements to t
 
 2. Read the primary sources for the session the user specifies. This may mean searching through session logs on this machine. If the user doesn't specify a session, default to the current one.
 
+   Then the environment's own records: `bash D:/GitHub/Configs/pi/backup.sh --check` and `bash D:/GitHub/Configs/sync.sh --check` print the setup changes that never reached the Configs backup — they belong in the findings. Ask the operator for `/subagents-watchdog status` (last warning, cadence): the watchdog leaves no other trace of its week.
+
 3. Look for candidates for improvement in these categories.
 
 - **Navigation**: how easy was it for the agent to find the right files? Are there hidden dependencies between files? Would a **navigation pointer** make it easier? _Use when_ the session took a long time to find a piece of information.
@@ -23,6 +25,8 @@ The user has asked for a **retrospective**. You are suggesting improvements to t
 - **Information access**: look for opportunities to increase the agent's access to information. Teeing dev server logs, readonly access to third-party services. _Use when_ a crucial piece of information was not available to the agent.
 
 4. Present these candidates to the user, in order of severity.
+
+5. After the operator picks the changes and they land, refresh the backup: `bash D:/GitHub/Configs/pi/backup.sh`, then `git -C D:/GitHub/Configs add pi && git commit -m "pi: snapshot after retro <date>" && git push` — the operator confirms the push.
 
 ## Reference
 

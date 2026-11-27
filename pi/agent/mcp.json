@@ -20,25 +20,12 @@
       "command": "npx",
       "args": [
         "-y",
-        "chrome-devtools-mcp@latest"
+        "chrome-devtools-mcp@1.14.0"
       ],
       "env": {
         "npm_config_registry": "https://registry.npmjs.org/"
       },
       "description": "Chrome DevTools for agents: control and inspect a live Chrome browser — automation, debugging, network/console analysis, performance traces, screenshots"
-    },
-    "serena": {
-      "command": "C:\\Users\\JohnDoe_it\\scoop\\persist\\uv\\tools\\shims\\serena.exe",
-      "args": [
-        "start-mcp-server",
-        "--context",
-        "opencode-readonly",
-        "--project-from-cwd",
-        "--open-web-dashboard",
-        "false"
-      ],
-      "timeout": 300,
-      "description": "Serena: read-only LSP символьный индекс кода (find_symbol, find_referencing_symbols, get_symbols_overview, get_diagnostics_for_file). Правки кода — только нативными инструментами pi, не через Serena"
     }
   }
 }

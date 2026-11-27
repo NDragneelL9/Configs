@@ -1,0 +1,10 @@
+{
+  "fetchRouting": {
+    "allowRemoteHostedProviders": true
+  },
+  "searchRouting": {
+    "providers": ["keenable", "duckduckgo", "exa"],
+    "useCurrentModel": false,
+    "fallbackOn": ["transient", "quota", "network", "invalid-response", "unsupported"]
+  }
+}

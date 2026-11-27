@@ -44,8 +44,12 @@ const text = snap.content.map(c => c.text ?? '').join('\n')
 // 3b. Скриншот — показать пользователю
 const shot = await tools.mcp__chrome_devtools__take_screenshot({ pageId: 1 })
 image(shot.content.find(c => c.type === 'image'))
-// image()-вложения (скриншоты и картинки) смотрит только glm-5.4 (AGENTS.md, «Subagent models»);
+// image()-вложения (скриншоты и картинки) смотрит только glm-5.4 (AGENTS.md, «Subagents»);
 // на другой модели анализ скриншота — субагенту с model: zai/glm-5.4 или ориентируйся по take_snapshot (3a)
+
+// Таймаут `MCP request timed out after 60000ms` на take_screenshot идёт серией (23.11: 5×60 с подряд);
+// `// @options: {"timeout_ms": …}` не помогает — лимит на стороне MCP. После первого таймаута не повторять:
+// геометрия — evaluate_script (getBoundingClientRect), содержимое — take_snapshot.
 
 // 4. Диагностика
 const msgs = await tools.mcp__chrome_devtools__list_console_messages({ pageId: 1 })
